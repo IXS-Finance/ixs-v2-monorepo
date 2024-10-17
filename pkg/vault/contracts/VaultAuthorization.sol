@@ -46,7 +46,7 @@ abstract contract VaultAuthorization is
     bytes32 private constant _EXIT_TYPE_HASH = 0x8bbc57f66ea936902f50a71ce12b92c43f3c5340bb40c27c4e90ab84eeae3353;
 
     // _SWAP_TYPE_HASH = keccak256("Swap(bytes calldata,address sender,uint256 nonce,uint256 deadline)");
-    bytes32 private constant _SWAP_TYPE_HASH = 0xe192dcbc143b1e244ad73b813fd3c097b832ad260a157340b4e5e5beda067abe;
+    bytes32 internal constant _SWAP_TYPE_HASH = 0xe192dcbc143b1e244ad73b813fd3c097b832ad260a157340b4e5e5beda067abe;
 
     // _BATCH_SWAP_TYPE_HASH = keccak256("BatchSwap(bytes calldata,address sender,uint256 nonce,uint256 deadline)");
     bytes32 private constant _BATCH_SWAP_TYPE_HASH = 0x9bfc43a4d98313c6766986ffd7c916c7481566d9f224c6819af0a53388aced3a;
@@ -89,7 +89,7 @@ abstract contract VaultAuthorization is
         _authorizer = newAuthorizer;
     }
 
-    function getAuthorizer() external view override returns (IAuthorizer) {
+    function getAuthorizer() public view override returns (IAuthorizer) {
         return _authorizer;
     }
 

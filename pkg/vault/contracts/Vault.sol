@@ -21,6 +21,7 @@ import "@balancer-labs/v2-interfaces/contracts/vault/IAuthorizer.sol";
 import "./VaultAuthorization.sol";
 import "./FlashLoans.sol";
 import "./Swaps.sol";
+import "./RwaAuthorization.sol";
 
 /**
  * @dev The `Vault` is Balancer V2's core contract. A single instance of it exists for the entire network, and it is the
@@ -57,13 +58,13 @@ import "./Swaps.sol";
  * utilization of `internal` functions (particularly inside modifiers), usage of named return arguments, dedicated
  * storage access methods, dynamic revert reason generation, and usage of inline assembly, to name a few.
  */
-contract Vault is VaultAuthorization, FlashLoans, Swaps {
+contract Vault is RwaAuthorization, FlashLoans, Swaps {
     constructor(
         IAuthorizer authorizer,
         IWETH weth,
         uint256 pauseWindowDuration,
         uint256 bufferPeriodDuration
-    ) VaultAuthorization(authorizer) AssetHelpers(weth) TemporarilyPausable(pauseWindowDuration, bufferPeriodDuration) {
+    ) RwaAuthorization(authorizer) AssetHelpers(weth) TemporarilyPausable(pauseWindowDuration, bufferPeriodDuration) {
         // solhint-disable-previous-line no-empty-blocks
     }
 
