@@ -20,9 +20,12 @@ import "./VaultAuthorization.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/IAuthorizer.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/IAsset.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/IRwaERC20.sol";
+import "@balancer-labs/v2-interfaces/contracts/vault/IAccessControlAuthorizer.sol";
 import "@balancer-labs/v2-interfaces/contracts/solidity-utils/openzeppelin/IERC165.sol";
 
 abstract contract RwaAuthorization is VaultAuthorization {
+    bytes32 private constant _OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
+
     mapping(address => uint256) public swapNonces;
 
     event ApprovedRwaSwap(address indexed operator, address indexed spender, uint256 indexed nonce, uint256 deadline);
@@ -86,6 +89,7 @@ abstract contract RwaAuthorization is VaultAuthorization {
         bytes32 s
     ) private {
         _require(operator != address(0), Errors.RWA_UNAUTHORIZED_SWAP);
+        _require(block.timestamp <= deadline, Errors.RWA_EXPIRED_SWAP);
 
         bytes32 digest = _hashTypedDataV4(
             keccak256(abi.encode(_SWAP_TYPE_HASH, operator, spender, swapNonces[spender], deadline))
@@ -94,7 +98,9 @@ abstract contract RwaAuthorization is VaultAuthorization {
         address recoveredAddress = ecrecover(digest, v, r, s);
 
         _require(recoveredAddress == operator, Errors.RWA_INVALID_SIGNATURE);
-        _require(address(getAuthorizer()) == operator, Errors.RWA_OPERATOR_FORBIDDEN);
+        IAccessControlAuthorizer authorizer = IAccessControlAuthorizer(address(getAuthorizer()));
+
+        _require(authorizer.hasRole(keccak256("OPERATOR_ROLE"), operator), Errors.RWA_OPERATOR_FORBIDDEN);
 
         emit ApprovedRwaSwap(operator, spender, swapNonces[spender], deadline);
         swapNonces[spender]++;
