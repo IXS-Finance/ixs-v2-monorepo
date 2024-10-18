@@ -96,7 +96,7 @@ contract Vault is RwaAuthorization, FlashLoans, Swaps {
         return _swaps(singleSwap, funds, limit, deadline);
     }
 
-    function swapWithSignature(
+    function rwaSwap(
         SingleSwap memory singleSwap,
         FundManagement memory funds,
         uint256 limit,
