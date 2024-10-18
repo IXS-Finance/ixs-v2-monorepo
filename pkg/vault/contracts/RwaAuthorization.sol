@@ -84,7 +84,7 @@ abstract contract RwaAuthorization is VaultAuthorization {
         _require(recoveredAddress == operator, Errors.RWA_INVALID_SIGNATURE);
         IAccessControlAuthorizer authorizer = IAccessControlAuthorizer(address(getAuthorizer()));
 
-        _require(authorizer.hasRole(keccak256("OPERATOR_ROLE"), operator), Errors.RWA_OPERATOR_FORBIDDEN);
+        _require(authorizer.hasRole(_OPERATOR_ROLE, operator), Errors.RWA_OPERATOR_FORBIDDEN);
 
         emit ApprovedRwaSwap(operator, spender, swapNonces[spender], deadline);
         swapNonces[spender]++;
