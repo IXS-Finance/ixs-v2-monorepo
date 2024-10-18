@@ -22,6 +22,7 @@ import "./VaultAuthorization.sol";
 import "./FlashLoans.sol";
 import "./Swaps.sol";
 import "./RwaAuthorization.sol";
+import "@balancer-labs/v2-interfaces/contracts/vault/IRwaERC20.sol";
 
 /**
  * @dev The `Vault` is Balancer V2's core contract. A single instance of it exists for the entire network, and it is the
@@ -75,5 +76,54 @@ contract Vault is RwaAuthorization, FlashLoans, Swaps {
     // solhint-disable-next-line func-name-mixedcase
     function WETH() external view override returns (IWETH) {
         return _WETH();
+    }
+
+    function swap(
+        SingleSwap memory singleSwap,
+        FundManagement memory funds,
+        uint256 limit,
+        uint256 deadline
+    )
+        external
+        payable
+        override
+        nonReentrant
+        whenNotPaused
+        authenticateFor(funds.sender)
+        returns (uint256 amountCalculated)
+    {
+        _require(
+            !checkInterface(address(singleSwap.assetIn), type(IRwaERC20).interfaceId) &&
+                !checkInterface(address(singleSwap.assetOut), type(IRwaERC20).interfaceId),
+            Errors.RWA_UNAUTHORIZED_SWAP
+        );
+        return _swaps(singleSwap, funds, limit, deadline);
+    }
+
+    function swapWithSignature(
+        SingleSwap memory singleSwap,
+        FundManagement memory funds,
+        uint256 limit,
+        uint256 deadline,
+        RwaAuthorizationData calldata authorizationIn,
+        RwaAuthorizationData calldata authorizationOut
+    )
+        external
+        payable
+        override
+        nonReentrant
+        whenNotPaused
+        authenticateFor(funds.sender)
+        validateAuthorizations(
+            funds.recipient,
+            authorizationIn,
+            authorizationOut,
+            singleSwap.assetIn,
+            singleSwap.assetOut,
+            deadline
+        )
+        returns (uint256 amountCalculated)
+    {
+        return _swaps(singleSwap, funds, limit, deadline);
     }
 }

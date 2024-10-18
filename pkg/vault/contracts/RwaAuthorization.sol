@@ -25,21 +25,15 @@ import "@balancer-labs/v2-interfaces/contracts/solidity-utils/openzeppelin/IERC1
 abstract contract RwaAuthorization is VaultAuthorization {
     mapping(address => uint256) public swapNonces;
 
-    struct RwaAuthorizationData {
-        address operator;
-        uint256 deadline;
-        uint8 v;
-        bytes32 r;
-        bytes32 s;
-    }
-
     event ApprovedRwaSwap(address indexed operator, address indexed spender, uint256 indexed nonce, uint256 deadline);
 
     modifier validateAuthorizations(
         address to,
-        RwaAuthorizationData[] memory authorizations,
+        RwaAuthorizationData memory authorizationIn,
+        RwaAuthorizationData memory authorizationOut,
         IAsset assetIn,
-        IAsset assetOut
+        IAsset assetOut,
+        uint256 deadline
     ) {
         // in dex v2, tokens are not physically transferred between pools so this check may not neccessary
         // if (IIxsV2Factory(factory).isPair(to)) {
@@ -47,32 +41,41 @@ abstract contract RwaAuthorization is VaultAuthorization {
         //     return;
         // }
 
-        RwaAuthorizationData memory authorization0 = authorizations[0];
-        RwaAuthorizationData memory authorization1 = authorizations[1];
-        if (IERC165(address(assetIn)).supportsInterface(type(IRwaERC20).interfaceId)) {
+        if (checkInterface(address(assetIn), type(IRwaERC20).interfaceId)) {
             _verifySwapSignature(
-                authorization0.operator,
+                authorizationIn.operator,
                 to,
-                authorization0.deadline,
-                authorization0.v,
-                authorization0.r,
-                authorization0.s
+                deadline,
+                authorizationIn.v,
+                authorizationIn.r,
+                authorizationIn.s
             );
         }
-        if (IERC165(address(assetOut)).supportsInterface(type(IRwaERC20).interfaceId)) {
+        if (checkInterface(address(assetOut), type(IRwaERC20).interfaceId)) {
             _verifySwapSignature(
-                authorization1.operator,
+                authorizationOut.operator,
                 to,
-                authorization1.deadline,
-                authorization1.v,
-                authorization1.r,
-                authorization1.s
+                deadline,
+                authorizationOut.v,
+                authorizationOut.r,
+                authorizationOut.s
             );
         }
         _;
     }
 
     constructor(IAuthorizer authorizer) VaultAuthorization(authorizer) {}
+
+    function checkInterface(address _contract, bytes4 _interfaceId) internal view returns (bool) {
+        if (_contract == address(0)) {
+            return false;
+        }
+        try IERC165(_contract).supportsInterface(_interfaceId) returns (bool result) {
+            return result;
+        } catch {
+            return false;
+        }
+    }
 
     function _verifySwapSignature(
         address operator,
@@ -84,15 +87,13 @@ abstract contract RwaAuthorization is VaultAuthorization {
     ) private {
         _require(operator != address(0), Errors.RWA_UNAUTHORIZED_SWAP);
 
-        _require(block.timestamp <= deadline, Errors.RWA_EXPIRED_SWAP);
-
         bytes32 digest = _hashTypedDataV4(
             keccak256(abi.encode(_SWAP_TYPE_HASH, operator, spender, swapNonces[spender], deadline))
         );
 
         address recoveredAddress = ecrecover(digest, v, r, s);
 
-        _require(recoveredAddress != address(0) && recoveredAddress == operator, Errors.RWA_INVALID_SIGNATURE);
+        _require(recoveredAddress == operator, Errors.RWA_INVALID_SIGNATURE);
         _require(address(getAuthorizer()) == operator, Errors.RWA_OPERATOR_FORBIDDEN);
 
         emit ApprovedRwaSwap(operator, spender, swapNonces[spender], deadline);
