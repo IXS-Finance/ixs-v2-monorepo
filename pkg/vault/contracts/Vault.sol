@@ -92,11 +92,7 @@ contract Vault is RwaAuthorization, FlashLoans, Swaps {
         authenticateFor(funds.sender)
         returns (uint256 amountCalculated)
     {
-        _require(
-            !checkInterface(address(singleSwap.assetIn), type(IRwaERC20).interfaceId) &&
-                !checkInterface(address(singleSwap.assetOut), type(IRwaERC20).interfaceId),
-            Errors.RWA_UNAUTHORIZED_SWAP
-        );
+        _require(!isRwaSwap(singleSwap.assetIn, singleSwap.assetOut), Errors.RWA_UNAUTHORIZED_SWAP);
         return _swaps(singleSwap, funds, limit, deadline);
     }
 
@@ -105,8 +101,7 @@ contract Vault is RwaAuthorization, FlashLoans, Swaps {
         FundManagement memory funds,
         uint256 limit,
         uint256 deadline,
-        RwaAuthorizationData calldata authorizationIn,
-        RwaAuthorizationData calldata authorizationOut
+        RwaAuthorizationData calldata authorization
     )
         external
         payable
@@ -114,16 +109,10 @@ contract Vault is RwaAuthorization, FlashLoans, Swaps {
         nonReentrant
         whenNotPaused
         authenticateFor(funds.sender)
-        validateAuthorizations(
-            funds.recipient,
-            authorizationIn,
-            authorizationOut,
-            singleSwap.assetIn,
-            singleSwap.assetOut,
-            deadline
-        )
+        validateAuthorizations(funds.recipient, authorization, deadline)
         returns (uint256 amountCalculated)
     {
+        _require(isRwaSwap(singleSwap.assetIn, singleSwap.assetOut), Errors.RWA_UNAUTHORIZED_SWAP);
         return _swaps(singleSwap, funds, limit, deadline);
     }
 }

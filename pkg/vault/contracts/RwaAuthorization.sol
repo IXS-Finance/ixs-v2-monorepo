@@ -32,10 +32,7 @@ abstract contract RwaAuthorization is VaultAuthorization {
 
     modifier validateAuthorizations(
         address to,
-        RwaAuthorizationData memory authorizationIn,
-        RwaAuthorizationData memory authorizationOut,
-        IAsset assetIn,
-        IAsset assetOut,
+        RwaAuthorizationData memory authorization,
         uint256 deadline
     ) {
         // in dex v2, tokens are not physically transferred between pools so this check may not neccessary
@@ -44,30 +41,17 @@ abstract contract RwaAuthorization is VaultAuthorization {
         //     return;
         // }
 
-        if (checkInterface(address(assetIn), type(IRwaERC20).interfaceId)) {
-            _verifySwapSignature(
-                authorizationIn.operator,
-                to,
-                deadline,
-                authorizationIn.v,
-                authorizationIn.r,
-                authorizationIn.s
-            );
-        }
-        if (checkInterface(address(assetOut), type(IRwaERC20).interfaceId)) {
-            _verifySwapSignature(
-                authorizationOut.operator,
-                to,
-                deadline,
-                authorizationOut.v,
-                authorizationOut.r,
-                authorizationOut.s
-            );
-        }
+        _verifySwapSignature(authorization.operator, to, deadline, authorization.v, authorization.r, authorization.s);
         _;
     }
 
     constructor(IAuthorizer authorizer) VaultAuthorization(authorizer) {}
+
+    function isRwaSwap(IAsset assetIn, IAsset assetOut) internal view returns (bool) {
+        return
+            checkInterface(address(assetIn), type(IRwaERC20).interfaceId) ||
+            checkInterface(address(assetOut), type(IRwaERC20).interfaceId);
+    }
 
     function checkInterface(address _contract, bytes4 _interfaceId) internal view returns (bool) {
         if (_contract == address(0)) {
