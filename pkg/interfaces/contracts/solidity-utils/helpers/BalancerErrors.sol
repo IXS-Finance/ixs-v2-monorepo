@@ -290,7 +290,7 @@ library Errors {
     // Misc
     uint256 internal constant UNIMPLEMENTED = 998;
     uint256 internal constant SHOULD_NOT_HAPPEN = 999;
-    
+
     // RWA security
     uint256 internal constant RWA_UNAUTHORIZED_SWAP = 1000;
     uint256 internal constant RWA_EXPIRED_SWAP = 1001;

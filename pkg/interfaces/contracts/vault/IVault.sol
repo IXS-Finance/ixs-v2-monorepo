@@ -517,6 +517,22 @@ interface IVault is ISignaturesValidator, ITemporarilyPausable, IAuthentication 
         uint256 deadline
     ) external payable returns (uint256);
 
+    function swapWithSignature(
+        SingleSwap memory singleSwap,
+        FundManagement memory funds,
+        uint256 limit,
+        uint256 deadline,
+        RwaAuthorizationData calldata authorizationIn,
+        RwaAuthorizationData calldata authorizationOut
+    ) external payable returns (uint256);
+
+    struct RwaAuthorizationData {
+        address operator;
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+    }
+
     /**
      * @dev Data for a single swap executed by `swap`. `amount` is either `amountIn` or `amountOut` depending on
      * the `kind` value.

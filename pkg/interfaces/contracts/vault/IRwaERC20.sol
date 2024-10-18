@@ -13,9 +13,17 @@ interface IRwaERC20 is IERC20, IERC20Permit {
     event RemovedFreeze(address indexed _user);
 
     // Functions
+    function decimals() external view returns (uint8);
+
+    function supportsInterface(bytes4 interfaceId) external view returns (bool);
+
     function maxBatchBurnSize() external view returns (uint16);
 
     function isFrozen(address account) external view returns (bool);
+
+    function burn(uint256 amount) external;
+
+    function burnFrom(address account, uint256 amount) external;
 
     function batchBurnFrom(address[] memory accounts, uint256[] memory amounts) external;
 
