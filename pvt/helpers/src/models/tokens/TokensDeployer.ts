@@ -34,6 +34,11 @@ class TokensDeployer {
         from: sender,
         args: [name, symbol, decimals],
       });
+    } else if (symbol.startsWith('RWA')) {
+      instance = await deploy('v2-solidity-utils/TestRwaERC20Token', {
+        from: sender,
+        args: [name, symbol, decimals],
+      });
     } else {
       instance = await deploy('v2-standalone-utils/TestWETH', {
         from: sender,
