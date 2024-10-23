@@ -30,21 +30,6 @@ abstract contract RwaAuthorization is VaultAuthorization {
 
     event ApprovedRwaSwap(address indexed operator, address indexed spender, uint256 indexed nonce, uint256 deadline);
 
-    modifier validateAuthorizations(
-        address to,
-        RwaAuthorizationData memory authorization,
-        uint256 deadline
-    ) {
-        // in dex v2, tokens are not physically transferred between pools so this check may not neccessary
-        // if (IIxsV2Factory(factory).isPair(to)) {
-        //     _;
-        //     return;
-        // }
-
-        _verifySwapSignature(authorization.operator, to, deadline, authorization.v, authorization.r, authorization.s);
-        _;
-    }
-
     constructor(IAuthorizer authorizer) VaultAuthorization(authorizer) {}
 
     function isRwaSwap(IAsset assetIn, IAsset assetOut) internal view returns (bool) {
@@ -64,29 +49,28 @@ abstract contract RwaAuthorization is VaultAuthorization {
         }
     }
 
-    function _verifySwapSignature(
-        address operator,
-        address spender,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) private {
-        _require(operator != address(0), Errors.RWA_UNAUTHORIZED_SWAP);
-        _require(block.timestamp <= deadline, Errors.RWA_EXPIRED_SWAP);
+    function verifyRwaSwapSignature(
+        address to,
+        RwaAuthorizationData memory authorization,
+        uint256 deadline
+    ) internal {
+        _require(block.timestamp <= deadline, Errors.EXPIRED_SIGNATURE);
 
         bytes32 digest = _hashTypedDataV4(
-            keccak256(abi.encode(_SWAP_TYPE_HASH, operator, spender, swapNonces[spender], deadline))
+            keccak256(abi.encode(_SWAP_TYPE_HASH, authorization.operator, to, swapNonces[to], deadline))
         );
 
-        address recoveredAddress = ecrecover(digest, v, r, s);
+        address recoveredAddress = ecrecover(digest, authorization.v, authorization.r, authorization.s);
 
-        _require(recoveredAddress == operator, Errors.RWA_INVALID_SIGNATURE);
+        _require(
+            authorization.operator != address(0) && recoveredAddress == authorization.operator,
+            Errors.INVALID_SIGNATURE
+        );
         IAccessControlAuthorizer authorizer = IAccessControlAuthorizer(address(getAuthorizer()));
 
-        _require(authorizer.hasRole(_OPERATOR_ROLE, operator), Errors.RWA_OPERATOR_FORBIDDEN);
+        _require(authorizer.hasRole(_OPERATOR_ROLE, authorization.operator), Errors.CALLER_IS_NOT_OWNER);
 
-        emit ApprovedRwaSwap(operator, spender, swapNonces[spender], deadline);
-        swapNonces[spender]++;
+        emit ApprovedRwaSwap(authorization.operator, to, swapNonces[to], deadline);
+        swapNonces[to]++;
     }
 }

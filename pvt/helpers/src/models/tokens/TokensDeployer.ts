@@ -29,20 +29,21 @@ class TokensDeployer {
     const sender = from || (await ethers.getSigners())[0];
 
     let instance;
-    if (symbol !== 'WETH') {
-      instance = await deploy('v2-solidity-utils/TestToken', {
+    if (symbol === 'WETH') {
+      instance = await deploy('v2-standalone-utils/TestWETH', {
         from: sender,
-        args: [name, symbol, decimals],
+        args: [],
       });
+      // use RWA prefix to distinguish between RWA tokens and ERC20 tokens
     } else if (symbol.startsWith('RWA')) {
       instance = await deploy('v2-solidity-utils/TestRwaERC20Token', {
         from: sender,
         args: [name, symbol, decimals],
       });
     } else {
-      instance = await deploy('v2-standalone-utils/TestWETH', {
+      instance = await deploy('v2-solidity-utils/TestToken', {
         from: sender,
-        args: [],
+        args: [name, symbol, decimals],
       });
     }
 

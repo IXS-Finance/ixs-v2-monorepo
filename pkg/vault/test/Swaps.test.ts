@@ -76,8 +76,6 @@ describe('Swaps', () => {
 
     await tokens.mint({ to: [lp, trader], amount: bn(200e18) });
     await tokens.approve({ to: vault, from: [lp, trader], amount: MAX_UINT112 });
-
-    // rwa token
   });
 
   beforeEach('set up default sender', async () => {
