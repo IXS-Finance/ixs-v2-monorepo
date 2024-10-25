@@ -107,7 +107,7 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
         _handleRemainingEth(wrappedEth);
     }
 
-    function _swaps(
+    function _swap(
         SingleSwap memory singleSwap,
         FundManagement memory funds,
         uint256 limit,

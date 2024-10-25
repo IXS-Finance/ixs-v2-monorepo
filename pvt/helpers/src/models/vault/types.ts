@@ -12,6 +12,7 @@ export type RawVaultDeployment = {
   maxYieldValue?: BigNumberish;
   maxAUMValue?: BigNumberish;
   from?: SignerWithAddress;
+  useBasicAuthorizer?: boolean;
 };
 
 export type VaultDeployment = {

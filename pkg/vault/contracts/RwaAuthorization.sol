@@ -20,13 +20,11 @@ import "./VaultAuthorization.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/IAuthorizer.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/IAsset.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/IRwaERC20.sol";
-import "@balancer-labs/v2-interfaces/contracts/vault/IAccessControlAuthorizer.sol";
+import "@balancer-labs/v2-interfaces/contracts/vault/IAuthorizer.sol";
 import "@balancer-labs/v2-interfaces/contracts/solidity-utils/openzeppelin/IERC165.sol";
 
 abstract contract RwaAuthorization is VaultAuthorization {
     bytes32 private constant _OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
-
-    mapping(address => uint256) public swapNonces;
 
     event ApprovedRwaSwap(address indexed operator, address indexed spender, uint256 indexed nonce, uint256 deadline);
 
@@ -54,23 +52,25 @@ abstract contract RwaAuthorization is VaultAuthorization {
         RwaAuthorizationData memory authorization,
         uint256 deadline
     ) internal {
-        _require(block.timestamp <= deadline, Errors.EXPIRED_SIGNATURE);
-
-        bytes32 digest = _hashTypedDataV4(
-            keccak256(abi.encode(_SWAP_TYPE_HASH, authorization.operator, to, swapNonces[to], deadline))
-        );
-
-        address recoveredAddress = ecrecover(digest, authorization.v, authorization.r, authorization.s);
+        IAuthorizer authorizer = IAuthorizer(address(getAuthorizer()));
 
         _require(
-            authorization.operator != address(0) && recoveredAddress == authorization.operator,
+            authorizer.canPerform(_OPERATOR_ROLE, authorization.operator, address(this)),
+            Errors.CALLER_IS_NOT_OWNER
+        );
+
+        bytes32 structHash = keccak256(
+            abi.encode(_SWAP_TYPE_HASH, authorization.operator, to, getNextNonce(to), deadline)
+        );
+
+        _ensureValidSignature(
+            authorization.operator,
+            structHash,
+            _toArraySignature(authorization.v, authorization.r, authorization.s),
+            deadline,
             Errors.INVALID_SIGNATURE
         );
-        IAccessControlAuthorizer authorizer = IAccessControlAuthorizer(address(getAuthorizer()));
 
-        _require(authorizer.hasRole(_OPERATOR_ROLE, authorization.operator), Errors.CALLER_IS_NOT_OWNER);
-
-        emit ApprovedRwaSwap(authorization.operator, to, swapNonces[to], deadline);
-        swapNonces[to]++;
+        emit ApprovedRwaSwap(authorization.operator, to, getNextNonce(to), deadline);
     }
 }

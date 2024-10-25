@@ -93,7 +93,7 @@ contract Vault is RwaAuthorization, FlashLoans, Swaps {
         returns (uint256 amountCalculated)
     {
         _require(!isRwaSwap(singleSwap.assetIn, singleSwap.assetOut), Errors.INVALID_TOKEN);
-        return _swaps(singleSwap, funds, limit, deadline);
+        return _swap(singleSwap, funds, limit, deadline);
     }
 
     function rwaSwap(
@@ -113,6 +113,6 @@ contract Vault is RwaAuthorization, FlashLoans, Swaps {
     {
         _require(isRwaSwap(singleSwap.assetIn, singleSwap.assetOut), Errors.INVALID_TOKEN);
         verifyRwaSwapSignature(funds.recipient, authorization, deadline);
-        return _swaps(singleSwap, funds, limit, deadline);
+        return _swap(singleSwap, funds, limit, deadline);
     }
 }
