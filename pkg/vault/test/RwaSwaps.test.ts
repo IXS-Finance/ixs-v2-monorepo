@@ -172,13 +172,6 @@ describe('RwaSwaps', () => {
         s: ethers.constants.HashZero,
       };
       const swaps = [{ in: testTokenList[0].index, out: testTokenList[1].index, amount: 1e18 }];
-      // context('deadline expired', () => {
-      //   itThrowsErrorForInvalidRwaSwapsArgs(
-      //     testTokenList,
-      //     { swaps, authorization: emptyAuthorization, deadline: 1 },
-      //     'EXPIRED_SIGNATURE'
-      //   );
-      // });
       context('operator is not authorized', () => {
         itThrowsErrorForInvalidRwaSwapsArgs(
           testTokenList,
@@ -191,7 +184,7 @@ describe('RwaSwaps', () => {
               s: ethers.constants.HashZero,
             },
           },
-          'CALLER_IS_NOT_OWNER'
+          'SENDER_NOT_ALLOWED'
         );
       });
       context('when rwa operator is set', () => {
@@ -235,10 +228,8 @@ describe('RwaSwaps', () => {
                 [_SWAP_TYPE_HASH, operatorAddress, to, nonce, deadline] // Values
               )
             );
-            // console.log('structHash', structHash);
 
             const domainSeparator = await vault.connect(lp).getDomainSeparator();
-            // console.log('domainSeparator', domainSeparator);
             const encodedData = ethers.utils.solidityPack(
               ['bytes2', 'bytes32', 'bytes32'],
               ['0x1901', domainSeparator, structHash]
@@ -250,10 +241,6 @@ describe('RwaSwaps', () => {
             const operatorWallet = new ethers.Wallet(operatorPk, ethers.provider);
 
             const signature = operatorWallet._signingKey().signDigest(digest);
-            const joinedSignature = ethers.utils.joinSignature(signature);
-
-            console.log(ethers.utils.recoverAddress(digest, joinedSignature));
-            console.log(operatorAddress);
 
             const splitSig = ethers.utils.splitSignature(signature);
             v = splitSig.v;
@@ -262,7 +249,7 @@ describe('RwaSwaps', () => {
 
             // Output the components
           });
-          it('should ', async () => {
+          it('should pass _verifyRwaSwapSignature', async () => {
             deployMainPool(
               PoolSpecialization.GeneralPool,
               testTokenList.map((v) => v.symbol)

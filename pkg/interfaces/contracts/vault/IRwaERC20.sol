@@ -4,8 +4,9 @@ pragma experimental ABIEncoderV2;
 
 import "../solidity-utils/openzeppelin/IERC20.sol";
 import "../solidity-utils/openzeppelin/IERC20Permit.sol";
+import "../solidity-utils/openzeppelin/IAccessControl.sol";
 
-interface IRwaERC20 is IERC20, IERC20Permit {
+interface IRwaERC20 is IERC20, IERC20Permit, IAccessControl {
     // Events
     event SetMaxBatchBurnSize(uint16 maxBatchBurnSize);
     event Redeemed(uint256 amount);

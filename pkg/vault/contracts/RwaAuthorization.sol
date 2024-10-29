@@ -30,7 +30,7 @@ abstract contract RwaAuthorization is VaultAuthorization {
 
     constructor(IAuthorizer authorizer) VaultAuthorization(authorizer) {}
 
-    function isRwaSwap(IAsset assetIn, IAsset assetOut) internal view returns (bool) {
+    function _isRwaSwap(IAsset assetIn, IAsset assetOut) internal view returns (bool) {
         return
             checkInterface(address(assetIn), type(IRwaERC20).interfaceId) ||
             checkInterface(address(assetOut), type(IRwaERC20).interfaceId);
@@ -47,7 +47,7 @@ abstract contract RwaAuthorization is VaultAuthorization {
         }
     }
 
-    function verifyRwaSwapSignature(
+    function _verifyRwaSwapSignature(
         address to,
         RwaAuthorizationData memory authorization,
         uint256 deadline
@@ -56,12 +56,11 @@ abstract contract RwaAuthorization is VaultAuthorization {
 
         _require(
             authorizer.canPerform(_OPERATOR_ROLE, authorization.operator, address(this)),
-            Errors.CALLER_IS_NOT_OWNER
+            Errors.SENDER_NOT_ALLOWED
         );
 
         bytes32 structHash = keccak256(
-            abi.encode(_SWAP_TYPE_HASH, authorization.operator, to, getNextNonce(to), deadline)
-        );
+            abi.encode(_SWAP_TYPE_HASH, authorization.operator, to, getNextNonce(to), deadline));
 
         _ensureValidSignature(
             authorization.operator,
