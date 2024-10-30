@@ -405,7 +405,7 @@ __metadata:
     ethereum-waffle: "npm:^3.4.4"
     ethers: "npm:^5.7.2"
     hardhat: "npm:^2.12.5"
-    hardhat-deploy: "npm:0.12.4"
+    hardhat-deploy: "npm:0.11.34"
     hardhat-ignore-warnings: "npm:^0.2.4"
     lodash.frompairs: "npm:^4.0.1"
     lodash.pick: "npm:^4.4.0"
@@ -5882,7 +5882,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ethers@npm:^5.0.1, ethers@npm:^5.0.2, ethers@npm:^5.5.2, ethers@npm:^5.7.0, ethers@npm:^5.7.1, ethers@npm:^5.7.2, ethers@npm:~5.7.0":
+"ethers@npm:^5.0.1, ethers@npm:^5.0.2, ethers@npm:^5.5.2, ethers@npm:^5.5.3, ethers@npm:^5.7.1, ethers@npm:^5.7.2":
   version: 5.7.2
   resolution: "ethers@npm:5.7.2"
   dependencies:
@@ -6903,9 +6903,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"hardhat-deploy@npm:0.12.4":
-  version: 0.12.4
-  resolution: "hardhat-deploy@npm:0.12.4"
+"hardhat-deploy@npm:0.11.34":
+  version: 0.11.34
+  resolution: "hardhat-deploy@npm:0.11.34"
   dependencies:
     "@ethersproject/abi": "npm:^5.7.0"
     "@ethersproject/abstract-signer": "npm:^5.7.0"
@@ -6924,14 +6924,14 @@ __metadata:
     chokidar: "npm:^3.5.2"
     debug: "npm:^4.3.2"
     enquirer: "npm:^2.3.6"
-    ethers: "npm:^5.7.0"
+    ethers: "npm:^5.5.3"
     form-data: "npm:^4.0.0"
     fs-extra: "npm:^10.0.0"
     match-all: "npm:^1.2.6"
     murmur-128: "npm:^0.2.1"
     qs: "npm:^6.9.4"
-    zksync-ethers: "npm:^5.0.0"
-  checksum: 05af622edb6b8f1d4b6d0d53e6bc4986c38e37d3a5950c50bbc56ec41b3d92fe06026e3ff87a8e3dc93a2e8a6c68b26702551ae6ddc2f20e48209393da8a6af6
+    zksync-web3: "npm:^0.14.3"
+  checksum: a0aec496b5bddb1ded267bc0d2745f33097562ac70c8af13ba2b9fd923dfcecc9a1ff9fe932abdb87ef5c7e58181b0523aec16dfe56266a5a10328d6f4a6bcca
   languageName: node
   linkType: hard
 
@@ -13506,13 +13506,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zksync-ethers@npm:^5.0.0":
-  version: 5.9.2
-  resolution: "zksync-ethers@npm:5.9.2"
-  dependencies:
-    ethers: "npm:~5.7.0"
+"zksync-web3@npm:^0.14.3":
+  version: 0.14.4
+  resolution: "zksync-web3@npm:0.14.4"
   peerDependencies:
-    ethers: ~5.7.0
-  checksum: bb07eb34a320e970ac60d837abcfc8329d29734662bc9214e45556c8a5859bad2472acf5507f776484d440b12c0bf8961b19baecc20e5bf8f8cf35a179208331
+    ethers: ^5.7.0
+  checksum: d03d8d6f34d08aab8d155a9cbff418f231ba1cd48cd6d83f836d87e946b42308b81e76faec803a05f829bd1752bafe14778e112ab9a3478f5e6c3524fd11c216
   languageName: node
   linkType: hard
