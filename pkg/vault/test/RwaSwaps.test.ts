@@ -250,7 +250,7 @@ describe('RwaSwaps', () => {
             // Output the components
           });
           it('should pass _verifyRwaSwapSignature', async () => {
-            deployMainPool(
+            mainPoolId = await deployPool(
               PoolSpecialization.GeneralPool,
               testTokenList.map((v) => v.symbol)
             );
@@ -265,8 +265,7 @@ describe('RwaSwaps', () => {
             const sender = trader;
             const swap = toSingleSwap(SwapKind.GivenOut, input);
             const call = vault.connect(sender).rwaSwap(swap, funds, MAX_INT256, MAX_INT256, authorization);
-
-            await expect(call).to.revertedWith('INVALID_POOL_ID');
+            await expect(call).to.not.be.reverted;
           });
         });
       });
