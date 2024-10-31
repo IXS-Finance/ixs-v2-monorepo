@@ -27,4 +27,9 @@ interface ISignaturesValidator {
      * @dev Returns the next nonce used by an address to sign messages.
      */
     function getNextNonce(address user) external view returns (uint256);
+
+    /**
+     * @dev Returns the next nonce used by an operator to sign messages on behalf of a user.
+     */
+    function getNextNonceByOperator(address operator, address user) external view returns (uint256);
 }

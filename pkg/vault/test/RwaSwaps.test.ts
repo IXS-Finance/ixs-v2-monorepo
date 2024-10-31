@@ -219,7 +219,7 @@ describe('RwaSwaps', () => {
             await authorizer.connect(admin).grantPermission(operatorRole, operatorAddress, ANY_ADDRESS);
             const _SWAP_TYPE_HASH = '0xe192dcbc143b1e244ad73b813fd3c097b832ad260a157340b4e5e5beda067abe';
             const to = funds.recipient;
-            const nonce = await vault.connect(lp).getNextNonce(to);
+            const nonce = await vault.connect(lp).getNextNonceByOperator(operatorAddress, to);
             const deadline = MAX_INT256;
 
             const structHash = ethers.utils.keccak256(

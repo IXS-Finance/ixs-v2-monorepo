@@ -60,10 +60,18 @@ abstract contract RwaAuthorization is VaultAuthorization {
         );
 
         bytes32 structHash = keccak256(
-            abi.encode(_SWAP_TYPE_HASH, authorization.operator, to, getNextNonce(to), deadline));
+            abi.encode(
+                _SWAP_TYPE_HASH,
+                authorization.operator,
+                to,
+                getNextNonceByOperator(authorization.operator, to),
+                deadline
+            )
+        );
 
-        _ensureValidSignature(
+        _ensureValidSignatureByOperator(
             authorization.operator,
+            to,
             structHash,
             _toArraySignature(authorization.v, authorization.r, authorization.s),
             deadline,
