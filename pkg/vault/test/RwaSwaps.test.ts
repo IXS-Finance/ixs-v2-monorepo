@@ -74,11 +74,15 @@ describe('RwaSwaps', () => {
   let vault: Contract, authorizer: Contract, funds: FundManagement, emptyAuthorization: RwaAuthorizationData;
   let tokens: TokenList;
   let mainPoolId: string, secondaryPoolId: string;
-  let lp: SignerWithAddress, trader: SignerWithAddress, other: SignerWithAddress, admin: SignerWithAddress;
+  let lp: SignerWithAddress,
+    trader: SignerWithAddress,
+    trader2: SignerWithAddress,
+    other: SignerWithAddress,
+    admin: SignerWithAddress;
 
   const poolInitialBalance = bn(50e18);
   before('setup', async () => {
-    [, lp, trader, other, admin] = await ethers.getSigners();
+    [, lp, trader, trader2, other, admin] = await ethers.getSigners();
   });
 
   sharedBeforeEach('deploy vault and tokens', async () => {
@@ -93,8 +97,8 @@ describe('RwaSwaps', () => {
     tokens.tokens.push(wethToken);
     tokens = new TokenList(tokens.tokens);
 
-    await tokens.mint({ to: [lp, trader], amount: bn(200e18) });
-    await tokens.approve({ to: vault, from: [lp, trader], amount: MAX_UINT112 });
+    await tokens.mint({ to: [lp, trader, trader2], amount: bn(200e18) });
+    await tokens.approve({ to: vault, from: [lp, trader, trader2], amount: MAX_UINT112 });
   });
 
   beforeEach('set up default sender', async () => {
@@ -286,6 +290,29 @@ describe('RwaSwaps', () => {
             let call = vault.connect(sender).rwaSwap(swap, funds, MAX_INT256, MAX_INT256, authorization);
             await expect(call).to.not.be.reverted;
             call = vault.connect(sender).rwaSwap(swap, funds, MAX_INT256, MAX_INT256, authorization);
+            await expect(call).to.be.revertedWith('INVALID_SIGNATURE');
+          });
+
+          it('should fail if tarder2 use signature generated for trader1 to swap', async () => {
+            mainPoolId = await deployPool(
+              PoolSpecialization.GeneralPool,
+              testTokenList.map((v) => v.symbol)
+            );
+
+            const authorization = {
+              operator: operatorAddress,
+              v,
+              r,
+              s,
+            };
+            const input = { swaps };
+            const sender = trader;
+
+            // Clone and modify original funds
+            const _funds = { ...funds };
+            _funds.recipient = trader2.address;
+            const swap = toSingleSwap(SwapKind.GivenOut, input);
+            const call = vault.connect(sender).rwaSwap(swap, _funds, MAX_INT256, MAX_INT256, authorization);
             await expect(call).to.be.revertedWith('INVALID_SIGNATURE');
           });
         });
