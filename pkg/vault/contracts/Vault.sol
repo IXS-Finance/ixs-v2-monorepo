@@ -21,6 +21,8 @@ import "@balancer-labs/v2-interfaces/contracts/vault/IAuthorizer.sol";
 import "./VaultAuthorization.sol";
 import "./FlashLoans.sol";
 import "./Swaps.sol";
+import "./RwaAuthorization.sol";
+import "@balancer-labs/v2-interfaces/contracts/vault/IRwaERC20.sol";
 
 /**
  * @dev The `Vault` is Balancer V2's core contract. A single instance of it exists for the entire network, and it is the
@@ -57,13 +59,13 @@ import "./Swaps.sol";
  * utilization of `internal` functions (particularly inside modifiers), usage of named return arguments, dedicated
  * storage access methods, dynamic revert reason generation, and usage of inline assembly, to name a few.
  */
-contract Vault is VaultAuthorization, FlashLoans, Swaps {
+contract Vault is RwaAuthorization, FlashLoans, Swaps {
     constructor(
         IAuthorizer authorizer,
         IWETH weth,
         uint256 pauseWindowDuration,
         uint256 bufferPeriodDuration
-    ) VaultAuthorization(authorizer) AssetHelpers(weth) TemporarilyPausable(pauseWindowDuration, bufferPeriodDuration) {
+    ) RwaAuthorization(authorizer) AssetHelpers(weth) TemporarilyPausable(pauseWindowDuration, bufferPeriodDuration) {
         // solhint-disable-previous-line no-empty-blocks
     }
 
@@ -74,5 +76,43 @@ contract Vault is VaultAuthorization, FlashLoans, Swaps {
     // solhint-disable-next-line func-name-mixedcase
     function WETH() external view override returns (IWETH) {
         return _WETH();
+    }
+
+    function swap(
+        SingleSwap memory singleSwap,
+        FundManagement memory funds,
+        uint256 limit,
+        uint256 deadline
+    )
+        external
+        payable
+        override
+        nonReentrant
+        whenNotPaused
+        authenticateFor(funds.sender)
+        returns (uint256 amountCalculated)
+    {
+        _require(!_isRwaSwap(singleSwap.assetIn, singleSwap.assetOut), Errors.INVALID_TOKEN);
+        return _swap(singleSwap, funds, limit, deadline);
+    }
+
+    function rwaSwap(
+        SingleSwap memory singleSwap,
+        FundManagement memory funds,
+        uint256 limit,
+        uint256 deadline,
+        RwaAuthorizationData calldata authorization
+    )
+        external
+        payable
+        override
+        nonReentrant
+        whenNotPaused
+        authenticateFor(funds.sender)
+        returns (uint256 amountCalculated)
+    {
+        _require(_isRwaSwap(singleSwap.assetIn, singleSwap.assetOut), Errors.INVALID_TOKEN);
+        _verifyRwaSwapSignature(funds.recipient, authorization, deadline);
+        return _swap(singleSwap, funds, limit, deadline);
     }
 }

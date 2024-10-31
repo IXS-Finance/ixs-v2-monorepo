@@ -33,6 +33,8 @@ import "@balancer-labs/v2-solidity-utils/contracts/math/Math.sol";
 import "./PoolBalances.sol";
 import "./balances/BalanceAllocation.sol";
 
+import "@balancer-labs/v2-interfaces/contracts/vault/IRwaERC20.sol";
+
 /**
  * Implements the Vault's high-level swap functionality.
  *
@@ -54,57 +56,6 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
     using Math for uint256;
     using SafeCast for uint256;
     using BalanceAllocation for bytes32;
-
-    function swap(
-        SingleSwap memory singleSwap,
-        FundManagement memory funds,
-        uint256 limit,
-        uint256 deadline
-    )
-        external
-        payable
-        override
-        nonReentrant
-        whenNotPaused
-        authenticateFor(funds.sender)
-        returns (uint256 amountCalculated)
-    {
-        // The deadline is timestamp-based: it should not be relied upon for sub-minute accuracy.
-        // solhint-disable-next-line not-rely-on-time
-        _require(block.timestamp <= deadline, Errors.SWAP_DEADLINE);
-
-        // This revert reason is for consistency with `batchSwap`: an equivalent `swap` performed using that function
-        // would result in this error.
-        _require(singleSwap.amount > 0, Errors.UNKNOWN_AMOUNT_IN_FIRST_SWAP);
-
-        IERC20 tokenIn = _translateToIERC20(singleSwap.assetIn);
-        IERC20 tokenOut = _translateToIERC20(singleSwap.assetOut);
-        _require(tokenIn != tokenOut, Errors.CANNOT_SWAP_SAME_TOKEN);
-
-        // Initializing each struct field one-by-one uses less gas than setting all at once.
-        IPoolSwapStructs.SwapRequest memory poolRequest;
-        poolRequest.poolId = singleSwap.poolId;
-        poolRequest.kind = singleSwap.kind;
-        poolRequest.tokenIn = tokenIn;
-        poolRequest.tokenOut = tokenOut;
-        poolRequest.amount = singleSwap.amount;
-        poolRequest.userData = singleSwap.userData;
-        poolRequest.from = funds.sender;
-        poolRequest.to = funds.recipient;
-        // The lastChangeBlock field is left uninitialized.
-
-        uint256 amountIn;
-        uint256 amountOut;
-
-        (amountCalculated, amountIn, amountOut) = _swapWithPool(poolRequest);
-        _require(singleSwap.kind == SwapKind.GIVEN_IN ? amountOut >= limit : amountIn <= limit, Errors.SWAP_LIMIT);
-
-        _receiveAsset(singleSwap.assetIn, amountIn, funds.sender, funds.fromInternalBalance);
-        _sendAsset(singleSwap.assetOut, amountOut, funds.recipient, funds.toInternalBalance);
-
-        // If the asset in is ETH, then `amountIn` ETH was wrapped into WETH.
-        _handleRemainingEth(_isETH(singleSwap.assetIn) ? amountIn : 0);
-    }
 
     function batchSwap(
         SwapKind kind,
@@ -154,6 +105,49 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
 
         // Handle any used and remaining ETH.
         _handleRemainingEth(wrappedEth);
+    }
+
+    function _swap(
+        SingleSwap memory singleSwap,
+        FundManagement memory funds,
+        uint256 limit,
+        uint256 deadline
+    ) internal returns (uint256 amountCalculated) {
+        // The deadline is timestamp-based: it should not be relied upon for sub-minute accuracy.
+        // solhint-disable-next-line not-rely-on-time
+        _require(block.timestamp <= deadline, Errors.SWAP_DEADLINE);
+
+        // This revert reason is for consistency with `batchSwap`: an equivalent `swap` performed using that function
+        // would result in this error.
+        _require(singleSwap.amount > 0, Errors.UNKNOWN_AMOUNT_IN_FIRST_SWAP);
+
+        IERC20 tokenIn = _translateToIERC20(singleSwap.assetIn);
+        IERC20 tokenOut = _translateToIERC20(singleSwap.assetOut);
+        _require(tokenIn != tokenOut, Errors.CANNOT_SWAP_SAME_TOKEN);
+
+        // Initializing each struct field one-by-one uses less gas than setting all at once.
+        IPoolSwapStructs.SwapRequest memory poolRequest;
+        poolRequest.poolId = singleSwap.poolId;
+        poolRequest.kind = singleSwap.kind;
+        poolRequest.tokenIn = tokenIn;
+        poolRequest.tokenOut = tokenOut;
+        poolRequest.amount = singleSwap.amount;
+        poolRequest.userData = singleSwap.userData;
+        poolRequest.from = funds.sender;
+        poolRequest.to = funds.recipient;
+        // The lastChangeBlock field is left uninitialized.
+
+        uint256 amountIn;
+        uint256 amountOut;
+
+        (amountCalculated, amountIn, amountOut) = _swapWithPool(poolRequest);
+        _require(singleSwap.kind == SwapKind.GIVEN_IN ? amountOut >= limit : amountIn <= limit, Errors.SWAP_LIMIT);
+
+        _receiveAsset(singleSwap.assetIn, amountIn, funds.sender, funds.fromInternalBalance);
+        _sendAsset(singleSwap.assetOut, amountOut, funds.recipient, funds.toInternalBalance);
+
+        // If the asset in is ETH, then `amountIn` ETH was wrapped into WETH.
+        _handleRemainingEth(_isETH(singleSwap.assetIn) ? amountIn : 0);
     }
 
     // For `_swapWithPools` to handle both 'given in' and 'given out' swaps, it internally tracks the 'given' amount

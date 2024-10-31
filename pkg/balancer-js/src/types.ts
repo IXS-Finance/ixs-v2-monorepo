@@ -15,6 +15,13 @@ export type FundManagement = {
 
 // Swaps
 
+export type RwaAuthorizationData = {
+  operator: string;
+  v: number;
+  r: string;
+  s: string;
+};
+
 export enum SwapKind {
   GivenIn = 0,
   GivenOut,
@@ -28,6 +35,8 @@ export type SingleSwap = {
   amount: BigNumberish;
   userData: string;
 };
+
+export type RwaSingleSwap = SingleSwap & { authorization: RwaAuthorizationData };
 
 export type Swap = {
   kind: SwapKind;
@@ -44,6 +53,8 @@ export type BatchSwapStep = {
   userData: string;
 };
 
+export type RwaBatchSwapStep = BatchSwapStep & { authorization: RwaAuthorizationData };
+
 export type BatchSwap = {
   kind: SwapKind;
   swaps: BatchSwapStep[];
@@ -52,6 +63,8 @@ export type BatchSwap = {
   limits: BigNumberish[];
   deadline: BigNumberish;
 };
+
+export type RwaBatchSwap = BatchSwap & { authorization: RwaAuthorizationData };
 
 export type SwapRequest = {
   kind: SwapKind;

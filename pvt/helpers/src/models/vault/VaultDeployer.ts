@@ -33,11 +33,16 @@ export default {
       deployment.maxAUMValue
     );
 
-    // Then, with the entrypoint correctly deployed, we create the actual authorizer to be used and set it in the vault.
-    const authorizer = await this._deployAuthorizer(admin, adaptorEntrypoint, nextAdmin, from);
-    const setAuthorizerActionId = await actionId(vault, 'setAuthorizer');
-    await basicAuthorizer.grantRolesToMany([setAuthorizerActionId], [admin.address]);
-    await vault.connect(admin).setAuthorizer(authorizer.address);
+    let authorizer;
+    if (!params.useBasicAuthorizer) {
+      // Then, with the entrypoint correctly deployed, we create the actual authorizer to be used and set it in the vault.
+      authorizer = await this._deployAuthorizer(admin, adaptorEntrypoint, nextAdmin, from);
+      const setAuthorizerActionId = await actionId(vault, 'setAuthorizer');
+      await basicAuthorizer.grantRolesToMany([setAuthorizerActionId], [admin.address]);
+      await vault.connect(admin).setAuthorizer(authorizer.address);
+    } else {
+      authorizer = basicAuthorizer;
+    }
 
     return new Vault(mocked, vault, authorizer, authorizerAdaptor, adaptorEntrypoint, protocolFeeProvider, admin);
   },
