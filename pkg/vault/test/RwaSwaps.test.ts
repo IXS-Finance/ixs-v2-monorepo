@@ -207,7 +207,7 @@ describe('RwaSwaps', () => {
             'INVALID_SIGNATURE'
           );
         });
-        context('when signature is valid', () => {
+        context('Testing signature logics', () => {
           let v: number;
           let r: string;
           let s: string;
@@ -266,6 +266,27 @@ describe('RwaSwaps', () => {
             const swap = toSingleSwap(SwapKind.GivenOut, input);
             const call = vault.connect(sender).rwaSwap(swap, funds, MAX_INT256, MAX_INT256, authorization);
             await expect(call).to.not.be.reverted;
+          });
+
+          it('should fail if reuse signature for another swap', async () => {
+            mainPoolId = await deployPool(
+              PoolSpecialization.GeneralPool,
+              testTokenList.map((v) => v.symbol)
+            );
+
+            const authorization = {
+              operator: operatorAddress,
+              v,
+              r,
+              s,
+            };
+            const input = { swaps };
+            const sender = trader;
+            const swap = toSingleSwap(SwapKind.GivenOut, input);
+            let call = vault.connect(sender).rwaSwap(swap, funds, MAX_INT256, MAX_INT256, authorization);
+            await expect(call).to.not.be.reverted;
+            call = vault.connect(sender).rwaSwap(swap, funds, MAX_INT256, MAX_INT256, authorization);
+            await expect(call).to.be.revertedWith('INVALID_SIGNATURE');
           });
         });
       });
