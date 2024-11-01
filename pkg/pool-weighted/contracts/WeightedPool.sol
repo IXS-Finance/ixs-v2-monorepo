@@ -17,7 +17,6 @@ pragma experimental ABIEncoderV2;
 
 import "./BaseWeightedPool.sol";
 import "./WeightedPoolProtocolFees.sol";
-import "hardhat/console.sol";
 
 /**
  * @dev Basic Weighted Pool with immutable weights.
