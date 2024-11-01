@@ -26,12 +26,31 @@ abstract contract EOASignaturesValidator is ISignaturesValidator, EIP712 {
     // Replay attack prevention for each account.
     mapping(address => uint256) internal _nextNonce;
 
+    /**
+     * @dev Tracks the next valid nonce for each operator-account pair to prevent replay attacks.
+     *
+     * This mapping allows separate nonce management for each unique operator-account combination,
+     * enabling multiple operators to securely sign transactions on behalf of the same account
+     * without interference. Each operator has its own nonce for each account, which increments
+     * after a valid signature is processed.
+     *
+     * Mapping Structure:
+     * - `address operator`: The address of the operator acting on behalf of an account.
+     * - `address account`: The address of the account for which the operator is authorized.
+     * - `uint256 nonce`: The next valid nonce for this specific operator-account pair.
+     */
+    mapping(address => mapping(address => uint256)) internal _nextNonceByOperator;
+
     function getDomainSeparator() public view override returns (bytes32) {
         return _domainSeparatorV4();
     }
 
     function getNextNonce(address account) public view override returns (uint256) {
         return _nextNonce[account];
+    }
+
+    function getNextNonceByOperator(address operator, address account) public view override returns (uint256) {
+        return _nextNonceByOperator[operator][account];
     }
 
     function _ensureValidSignature(
@@ -64,6 +83,30 @@ abstract contract EOASignaturesValidator is ISignaturesValidator, EIP712 {
         // important in derived contracts that override _isValidSignature (e.g. SignaturesValidator), as we want for
         // the observable state to still have the current nonce as the next valid one.
         _nextNonce[account] += 1;
+    }
+
+    function _ensureValidSignatureByOperator(
+        address operator,
+        address account,
+        bytes32 structHash,
+        bytes memory signature,
+        uint256 deadline,
+        uint256 errorCode
+    ) internal {
+        bytes32 digest = _hashTypedDataV4(structHash);
+        _require(_isValidSignature(operator, digest, signature), errorCode);
+
+        // We could check for the deadline before validating the signature, but this leads to saner error processing (as
+        // we only care about expired deadlines if the signature is correct) and only affects the gas cost of the revert
+        // scenario, which will only occur infrequently, if ever.
+        // The deadline is timestamp-based: it should not be relied upon for sub-minute accuracy.
+        // solhint-disable-next-line not-rely-on-time
+        _require(deadline >= block.timestamp, Errors.EXPIRED_SIGNATURE);
+
+        // We only advance the nonce after validating the signature. This is irrelevant for this module, but it can be
+        // important in derived contracts that override _isValidSignature (e.g. SignaturesValidator), as we want for
+        // the observable state to still have the current nonce as the next valid one.
+        _nextNonceByOperator[operator][account] += 1;
     }
 
     function _isValidSignature(

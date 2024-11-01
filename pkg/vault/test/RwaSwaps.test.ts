@@ -74,11 +74,15 @@ describe('RwaSwaps', () => {
   let vault: Contract, authorizer: Contract, funds: FundManagement, emptyAuthorization: RwaAuthorizationData;
   let tokens: TokenList;
   let mainPoolId: string, secondaryPoolId: string;
-  let lp: SignerWithAddress, trader: SignerWithAddress, other: SignerWithAddress, admin: SignerWithAddress;
+  let lp: SignerWithAddress,
+    trader: SignerWithAddress,
+    trader2: SignerWithAddress,
+    other: SignerWithAddress,
+    admin: SignerWithAddress;
 
   const poolInitialBalance = bn(50e18);
   before('setup', async () => {
-    [, lp, trader, other, admin] = await ethers.getSigners();
+    [, lp, trader, trader2, other, admin] = await ethers.getSigners();
   });
 
   sharedBeforeEach('deploy vault and tokens', async () => {
@@ -93,8 +97,8 @@ describe('RwaSwaps', () => {
     tokens.tokens.push(wethToken);
     tokens = new TokenList(tokens.tokens);
 
-    await tokens.mint({ to: [lp, trader], amount: bn(200e18) });
-    await tokens.approve({ to: vault, from: [lp, trader], amount: MAX_UINT112 });
+    await tokens.mint({ to: [lp, trader, trader2], amount: bn(200e18) });
+    await tokens.approve({ to: vault, from: [lp, trader, trader2], amount: MAX_UINT112 });
   });
 
   beforeEach('set up default sender', async () => {
@@ -207,7 +211,7 @@ describe('RwaSwaps', () => {
             'INVALID_SIGNATURE'
           );
         });
-        context('when signature is valid', () => {
+        context('Testing signature logics', () => {
           let v: number;
           let r: string;
           let s: string;
@@ -219,7 +223,7 @@ describe('RwaSwaps', () => {
             await authorizer.connect(admin).grantPermission(operatorRole, operatorAddress, ANY_ADDRESS);
             const _SWAP_TYPE_HASH = '0xe192dcbc143b1e244ad73b813fd3c097b832ad260a157340b4e5e5beda067abe';
             const to = funds.recipient;
-            const nonce = await vault.connect(lp).getNextNonce(to);
+            const nonce = await vault.connect(lp).getNextNonceByOperator(operatorAddress, to);
             const deadline = MAX_INT256;
 
             const structHash = ethers.utils.keccak256(
@@ -266,6 +270,50 @@ describe('RwaSwaps', () => {
             const swap = toSingleSwap(SwapKind.GivenOut, input);
             const call = vault.connect(sender).rwaSwap(swap, funds, MAX_INT256, MAX_INT256, authorization);
             await expect(call).to.not.be.reverted;
+          });
+
+          it('should fail if reuse signature for another swap', async () => {
+            mainPoolId = await deployPool(
+              PoolSpecialization.GeneralPool,
+              testTokenList.map((v) => v.symbol)
+            );
+
+            const authorization = {
+              operator: operatorAddress,
+              v,
+              r,
+              s,
+            };
+            const input = { swaps };
+            const sender = trader;
+            const swap = toSingleSwap(SwapKind.GivenOut, input);
+            let call = vault.connect(sender).rwaSwap(swap, funds, MAX_INT256, MAX_INT256, authorization);
+            await expect(call).to.not.be.reverted;
+            call = vault.connect(sender).rwaSwap(swap, funds, MAX_INT256, MAX_INT256, authorization);
+            await expect(call).to.be.revertedWith('INVALID_SIGNATURE');
+          });
+
+          it('should fail if tarder2 use signature generated for trader1 to swap', async () => {
+            mainPoolId = await deployPool(
+              PoolSpecialization.GeneralPool,
+              testTokenList.map((v) => v.symbol)
+            );
+
+            const authorization = {
+              operator: operatorAddress,
+              v,
+              r,
+              s,
+            };
+            const input = { swaps };
+            const sender = trader;
+
+            // Clone and modify original funds
+            const _funds = { ...funds };
+            _funds.recipient = trader2.address;
+            const swap = toSingleSwap(SwapKind.GivenOut, input);
+            const call = vault.connect(sender).rwaSwap(swap, _funds, MAX_INT256, MAX_INT256, authorization);
+            await expect(call).to.be.revertedWith('INVALID_SIGNATURE');
           });
         });
       });
