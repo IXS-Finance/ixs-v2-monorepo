@@ -26,3 +26,5 @@ pkg/balancer-js/src/typechain/*
 forge-artifacts/
 forge-cache/
 .vscode
+
+.env
