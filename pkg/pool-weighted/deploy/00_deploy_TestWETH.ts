@@ -7,15 +7,15 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const { deployer } = await getNamedAccounts();
 
-  // Deploy the WETH9 contract
-  const weth9 = await deploy('WETH9', {
+  // Deploy the TestWETH contract
+  const testWETH = await deploy('TestWETH', {
     from: deployer,
     args: [], // if the constructor requires arguments, pass them here
     log: true,
   });
 
-  console.log('WETH9 deployed to:', weth9.address);
+  console.log('TestWETH deployed to:', testWETH.address);
 };
 
 export default func;
-func.tags = ['WETH9'];
+func.tags = ['TestWETH'];
