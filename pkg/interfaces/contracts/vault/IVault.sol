@@ -589,6 +589,17 @@ interface IVault is ISignaturesValidator, ITemporarilyPausable, IAuthentication 
         uint256 deadline
     ) external payable returns (int256[] memory);
 
+        function rwaBatchSwap(
+        SwapKind kind,
+        BatchSwapStep[] memory swaps,
+        IAsset[] memory assets,
+        FundManagement memory funds,
+        int256[] memory limits,
+        uint256 deadline,
+        RwaAuthorizationData calldata authorization
+    ) external payable returns (int256[] memory);
+
+
     /**
      * @dev Data for each individual swap executed by `batchSwap`. The asset in and out fields are indexes into the
      * `assets` array passed to that function, and ETH assets are converted to WETH.

@@ -57,22 +57,14 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
     using SafeCast for uint256;
     using BalanceAllocation for bytes32;
 
-    function batchSwap(
+    function _batchSwap(
         SwapKind kind,
         BatchSwapStep[] memory swaps,
         IAsset[] memory assets,
         FundManagement memory funds,
         int256[] memory limits,
         uint256 deadline
-    )
-        external
-        payable
-        override
-        nonReentrant
-        whenNotPaused
-        authenticateFor(funds.sender)
-        returns (int256[] memory assetDeltas)
-    {
+    ) internal returns (int256[] memory assetDeltas) {
         // The deadline is timestamp-based: it should not be relied upon for sub-minute accuracy.
         // solhint-disable-next-line not-rely-on-time
         _require(block.timestamp <= deadline, Errors.SWAP_DEADLINE);

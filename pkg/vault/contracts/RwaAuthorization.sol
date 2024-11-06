@@ -30,10 +30,8 @@ abstract contract RwaAuthorization is VaultAuthorization {
 
     constructor(IAuthorizer authorizer) VaultAuthorization(authorizer) {}
 
-    function _isRwaSwap(IAsset assetIn, IAsset assetOut) internal view returns (bool) {
-        return
-            checkInterface(address(assetIn), type(IRwaERC20).interfaceId) ||
-            checkInterface(address(assetOut), type(IRwaERC20).interfaceId);
+    function _isRwaToken(IAsset asset) internal view returns (bool) {
+        return checkInterface(address(asset), type(IRwaERC20).interfaceId);
     }
 
     function checkInterface(address _contract, bytes4 _interfaceId) internal view returns (bool) {

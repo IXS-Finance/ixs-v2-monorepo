@@ -77,6 +77,59 @@ contract Vault is RwaAuthorization, Swaps {
         return _WETH();
     }
 
+    function batchSwap(
+        SwapKind kind,
+        BatchSwapStep[] memory swaps,
+        IAsset[] memory assets,
+        FundManagement memory funds,
+        int256[] memory limits,
+        uint256 deadline
+    )
+        external
+        payable
+        override
+        nonReentrant
+        whenNotPaused
+        authenticateFor(funds.sender)
+        returns (int256[] memory assetDeltas)
+    {
+        for (uint256 i = 0; i < assets.length; ++i) {
+            if (_isRwaToken(assets[i])) {
+                _revert(Errors.INVALID_TOKEN);
+            }
+        }
+        return _batchSwap(kind, swaps, assets, funds, limits, deadline);
+    }
+
+    function rwaBatchSwap(
+        SwapKind kind,
+        BatchSwapStep[] memory swaps,
+        IAsset[] memory assets,
+        FundManagement memory funds,
+        int256[] memory limits,
+        uint256 deadline,
+        RwaAuthorizationData calldata authorization
+    )
+        external
+        payable
+        override
+        nonReentrant
+        whenNotPaused
+        authenticateFor(funds.sender)
+        returns (int256[] memory assetDeltas)
+    {
+        bool hasRwaToken = false;
+        for (uint256 i = 0; i < assets.length; ++i) {
+            if (_isRwaToken(assets[i])) {
+                hasRwaToken = true;
+                break;
+            }
+        }
+        _require(hasRwaToken, Errors.INVALID_TOKEN);
+        _verifyRwaSwapSignature(funds.recipient, authorization, deadline);
+        return _batchSwap(kind, swaps, assets, funds, limits, deadline);
+    }
+
     function swap(
         SingleSwap memory singleSwap,
         FundManagement memory funds,
@@ -91,7 +144,7 @@ contract Vault is RwaAuthorization, Swaps {
         authenticateFor(funds.sender)
         returns (uint256 amountCalculated)
     {
-        _require(!_isRwaSwap(singleSwap.assetIn, singleSwap.assetOut), Errors.INVALID_TOKEN);
+        _require(!_isRwaToken(singleSwap.assetIn) && !_isRwaToken(singleSwap.assetOut), Errors.INVALID_TOKEN);
         return _swap(singleSwap, funds, limit, deadline);
     }
 
@@ -110,7 +163,7 @@ contract Vault is RwaAuthorization, Swaps {
         authenticateFor(funds.sender)
         returns (uint256 amountCalculated)
     {
-        _require(_isRwaSwap(singleSwap.assetIn, singleSwap.assetOut), Errors.INVALID_TOKEN);
+        _require(_isRwaToken(singleSwap.assetIn) || _isRwaToken(singleSwap.assetOut), Errors.INVALID_TOKEN);
         _verifyRwaSwapSignature(funds.recipient, authorization, deadline);
         return _swap(singleSwap, funds, limit, deadline);
     }
