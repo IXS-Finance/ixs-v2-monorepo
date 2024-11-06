@@ -19,7 +19,6 @@ import "@balancer-labs/v2-interfaces/contracts/solidity-utils/misc/IWETH.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/IAuthorizer.sol";
 
 import "./VaultAuthorization.sol";
-import "./FlashLoans.sol";
 import "./Swaps.sol";
 import "./RwaAuthorization.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/IRwaERC20.sol";
@@ -59,7 +58,7 @@ import "@balancer-labs/v2-interfaces/contracts/vault/IRwaERC20.sol";
  * utilization of `internal` functions (particularly inside modifiers), usage of named return arguments, dedicated
  * storage access methods, dynamic revert reason generation, and usage of inline assembly, to name a few.
  */
-contract Vault is RwaAuthorization, FlashLoans, Swaps {
+contract Vault is RwaAuthorization, Swaps {
     constructor(
         IAuthorizer authorizer,
         IWETH weth,

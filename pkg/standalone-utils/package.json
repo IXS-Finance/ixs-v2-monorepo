@@ -9,9 +9,6 @@
     "url": "https://github.com/balancer-labs/balancer-v2-monorepo.git",
     "directory": "pkg/standalone-utils"
   },
-  "exports": {
-    "./artifacts": "./artifacts"
-  },
   "bugs": {
     "url": "https://github.com/balancer-labs/balancer-v2-monorepo/issues"
   },

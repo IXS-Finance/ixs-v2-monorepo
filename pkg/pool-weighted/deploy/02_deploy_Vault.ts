@@ -19,7 +19,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [authorizer.address, testWETH.address, PAUSE_WINDOW_DURATION, BUFFER_PERIOD_DURATION], // if the constructor requires arguments, pass them here
     // use create2 deploy an identical address to multiple chains
     // this is required by sdk for some contracts
-    // deterministicDeployment: utils.formatBytes32String(process.env.VAULT_DEPLOYMENT_SALT as string),
+    deterministicDeployment: utils.formatBytes32String(process.env.VAULT_DEPLOYMENT_SALT as string),
     log: true,
   });
 

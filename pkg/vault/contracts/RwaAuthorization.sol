@@ -78,6 +78,6 @@ abstract contract RwaAuthorization is VaultAuthorization {
             Errors.INVALID_SIGNATURE
         );
 
-        emit ApprovedRwaSwap(authorization.operator, to, getNextNonce(to), deadline);
+        emit ApprovedRwaSwap(authorization.operator, to, getNextNonceByOperator(authorization.operator, to), deadline);
     }
 }
