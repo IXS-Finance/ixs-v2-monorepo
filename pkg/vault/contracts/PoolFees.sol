@@ -27,21 +27,22 @@ import "./ProtocolFeesCollector.sol";
 import "./VaultAuthorization.sol";
 
 import "@balancer-labs/v2-interfaces/contracts/vault/IPoolFees.sol";
+
 // import "./PoolRegistry.sol";
 
-contract PoolFee is IPoolFee {
+contract PoolFee is IPoolFees {
     using SafeERC20 for IERC20;
 
     address public vault;
 
-    mapping(address => mapping (bytes32 => mapping(address => uint256))) public supplyIndex;
-    mapping(address => mapping (bytes32 => mapping(address => uint256))) public claimable;
+    mapping(address => mapping(bytes32 => mapping(address => uint256))) public supplyIndex;
+    mapping(address => mapping(bytes32 => mapping(address => uint256))) public claimable;
 
     constructor(address _vault) {
         vault = _vault;
     }
 
-    function claimFees(bytes32 _poolId) external override{
+    function claimFees(bytes32 _poolId) external override {
         // check if poolId is valid
         require(_poolId != bytes32(0), "invalid poolId");
 
@@ -52,18 +53,22 @@ contract PoolFee is IPoolFee {
         IERC20[] memory tokens;
         (tokens, , ) = IVault(vault).getPoolTokens(_poolId);
         require(tokens.length > 0, "no tokens in pool");
-        for(uint i = 0; i < tokens.length; i++){
+        for (uint256 i = 0; i < tokens.length; i++) {
             _updateSupplyIndex(msg.sender, _poolId, address(tokens[i]));
             IERC20 token = IERC20(tokens[i]);
             uint256 claimableAmount = claimable[msg.sender][_poolId][address(token)];
-            if(claimableAmount > 0){
+            if (claimableAmount > 0) {
                 claimable[msg.sender][_poolId][address(token)] = 0;
                 token.safeTransfer(msg.sender, claimableAmount);
             }
         }
     }
 
-    function _updateSupplyIndex(address _recipient, bytes32 _poolId, address _token) internal{
+    function _updateSupplyIndex(
+        address _recipient,
+        bytes32 _poolId,
+        address _token
+    ) internal {
         IERC20 token = IERC20(_token);
         uint256 _supplied = token.balanceOf(_recipient); // get LP balance of `recipient`
         uint256 _indexRatio = IVault(vault).getIndexRatio(_poolId, address(token)); // get global index for accumulated fees
@@ -76,8 +81,7 @@ contract PoolFee is IPoolFee {
                 uint256 _share = (_supplied * _delta0) / 1e18; // add accrued difference for each supplied token
                 claimable[_recipient][_poolId][address(token)] += _share;
             }
-        }
-        else {
+        } else {
             supplyIndex[_recipient][_poolId][address(token)] = _indexRatio;
         }
     }

@@ -53,7 +53,7 @@ abstract contract Fees is IVault {
         return getProtocolFeesCollector().getSwapFeePercentage();
     }
 
-    function getPoolFeeCollector() public view override returns (IPoolFee) {
+    function getPoolFeeCollector() public view override returns (IPoolFees) {
         return _poolFeeCollector;
     }
 
