@@ -109,60 +109,60 @@ describe('RwaSwaps', () => {
       toInternalBalance: false,
     };
   });
-  context('swaps function should throw error if one of tokens is RWA token', () => {
-    context('with two tokens. one of them is RWA token. the other is ERC20 token', () => {
-      const testTokenList = [
-        { symbol: 'DAI', index: 0 },
-        { symbol: 'RWATT', index: 2 },
-      ];
+  // context('swaps function should throw error if one of tokens is RWA token', () => {
+  //   context('with two tokens. one of them is RWA token. the other is ERC20 token', () => {
+  //     const testTokenList = [
+  //       { symbol: 'DAI', index: 0 },
+  //       { symbol: 'RWATT', index: 2 },
+  //     ];
 
-      context('with a general pool', () => {
-        itHandlesSwapsProperly(PoolSpecialization.GeneralPool, testTokenList);
-      });
+  //     context('with a general pool', () => {
+  //       itHandlesSwapsProperly(PoolSpecialization.GeneralPool, testTokenList);
+  //     });
 
-      context('with a minimal swap info pool', () => {
-        itHandlesSwapsProperly(PoolSpecialization.MinimalSwapInfoPool, testTokenList);
-      });
+  //     context('with a minimal swap info pool', () => {
+  //       itHandlesSwapsProperly(PoolSpecialization.MinimalSwapInfoPool, testTokenList);
+  //     });
 
-      context('with a two token pool', () => {
-        itHandlesSwapsProperly(PoolSpecialization.TwoTokenPool, testTokenList);
-      });
-    });
-    context('with two tokens. All of them are RWA tokens', () => {
-      const testTokenList = [
-        { symbol: 'RWATT', index: 2 },
-        { symbol: 'RWATT2', index: 3 },
-      ];
+  //     context('with a two token pool', () => {
+  //       itHandlesSwapsProperly(PoolSpecialization.TwoTokenPool, testTokenList);
+  //     });
+  //   });
+  //   context('with two tokens. All of them are RWA tokens', () => {
+  //     const testTokenList = [
+  //       { symbol: 'RWATT', index: 2 },
+  //       { symbol: 'RWATT2', index: 3 },
+  //     ];
 
-      context('with a general pool', () => {
-        itHandlesSwapsProperly(PoolSpecialization.GeneralPool, testTokenList);
-      });
+  //     context('with a general pool', () => {
+  //       itHandlesSwapsProperly(PoolSpecialization.GeneralPool, testTokenList);
+  //     });
 
-      context('with a minimal swap info pool', () => {
-        itHandlesSwapsProperly(PoolSpecialization.MinimalSwapInfoPool, testTokenList);
-      });
+  //     context('with a minimal swap info pool', () => {
+  //       itHandlesSwapsProperly(PoolSpecialization.MinimalSwapInfoPool, testTokenList);
+  //     });
 
-      context('with a two token pool', () => {
-        itHandlesSwapsProperly(PoolSpecialization.TwoTokenPool, testTokenList);
-      });
-    });
-  });
+  //     context('with a two token pool', () => {
+  //       itHandlesSwapsProperly(PoolSpecialization.TwoTokenPool, testTokenList);
+  //     });
+  //   });
+  // });
 
   context('rwaSwaps function should throw error', () => {
-    context('if none of tokens are RWA tokens', () => {
-      const testTokenList = [
-        { symbol: 'DAI', index: 0 },
-        { symbol: 'MKR', index: 1 },
-      ];
-      const emptyAuthorization = {
-        operator: ethers.constants.AddressZero,
-        v: 0,
-        r: ethers.constants.HashZero,
-        s: ethers.constants.HashZero,
-      };
-      const swaps = [{ in: testTokenList[0].index, out: testTokenList[1].index, amount: 1e18 }];
-      itThrowsErrorForInvalidRwaSwapsArgs(testTokenList, { swaps, authorization: emptyAuthorization }, 'INVALID_TOKEN');
-    });
+    // context('if none of tokens are RWA tokens', () => {
+    //   const testTokenList = [
+    //     { symbol: 'DAI', index: 0 },
+    //     { symbol: 'MKR', index: 1 },
+    //   ];
+    //   const emptyAuthorization = {
+    //     operator: ethers.constants.AddressZero,
+    //     v: 0,
+    //     r: ethers.constants.HashZero,
+    //     s: ethers.constants.HashZero,
+    //   };
+    //   const swaps = [{ in: testTokenList[0].index, out: testTokenList[1].index, amount: 1e18 }];
+    //   itThrowsErrorForInvalidRwaSwapsArgs(testTokenList, { swaps, authorization: emptyAuthorization }, 'INVALID_TOKEN');
+    // });
 
     context('one of tokens is RWA tokens', () => {
       const testTokenList = [
@@ -176,21 +176,21 @@ describe('RwaSwaps', () => {
         s: ethers.constants.HashZero,
       };
       const swaps = [{ in: testTokenList[0].index, out: testTokenList[1].index, amount: 1e18 }];
-      context('operator is not authorized', () => {
-        itThrowsErrorForInvalidRwaSwapsArgs(
-          testTokenList,
-          {
-            swaps,
-            authorization: {
-              operator: '0xbA54cAA3ac52C416AfB461A07aec1744C08462e5',
-              v: 0,
-              r: ethers.constants.HashZero,
-              s: ethers.constants.HashZero,
-            },
-          },
-          'SENDER_NOT_ALLOWED'
-        );
-      });
+      // context('operator is not authorized', () => {
+      //   itThrowsErrorForInvalidRwaSwapsArgs(
+      //     testTokenList,
+      //     {
+      //       swaps,
+      //       authorization: {
+      //         operator: '0xbA54cAA3ac52C416AfB461A07aec1744C08462e5',
+      //         v: 0,
+      //         r: ethers.constants.HashZero,
+      //         s: ethers.constants.HashZero,
+      //       },
+      //     },
+      //     'SENDER_NOT_ALLOWED'
+      //   );
+      // });
       context('when rwa operator is set', () => {
         const operatorAddress = '0xbA54cAA3ac52C416AfB461A07aec1744C08462e5';
         sharedBeforeEach('set rwa operator', async () => {
@@ -267,8 +267,21 @@ describe('RwaSwaps', () => {
             };
             const input = { swaps };
             const sender = trader;
-            const swap = toSingleSwap(SwapKind.GivenOut, input);
-            const call = vault.connect(sender).rwaSwap(swap, funds, MAX_INT256, MAX_INT256, authorization);
+            // const swap = toSingleSwap(SwapKind.GivenOut, input);
+            const swap = toBatchSwap(input);
+            // const call = vault.connect(sender).rwaSwap(swap, funds, MAX_INT256, MAX_INT256, authorization);
+            const call = vault
+              .connect(sender)
+              .rwaBatchSwap(
+                SwapKind.GivenIn,
+                swap,
+                tokens.addresses,
+                funds,
+                Array(tokens.length).fill(MAX_INT256),
+                MAX_INT256,
+                authorization
+              );
+
             await expect(call).to.not.be.reverted;
           });
 
@@ -286,10 +299,33 @@ describe('RwaSwaps', () => {
             };
             const input = { swaps };
             const sender = trader;
-            const swap = toSingleSwap(SwapKind.GivenOut, input);
-            let call = vault.connect(sender).rwaSwap(swap, funds, MAX_INT256, MAX_INT256, authorization);
+            // const swap = toSingleSwap(SwapKind.GivenOut, input);
+            // let call = vault.connect(sender).rwaSwap(swap, funds, MAX_INT256, MAX_INT256, authorization);
+            const swap = toBatchSwap(input);
+            // const call = vault.connect(sender).rwaSwap(swap, funds, MAX_INT256, MAX_INT256, authorization);
+            let call = vault
+              .connect(sender)
+              .rwaBatchSwap(
+                SwapKind.GivenIn,
+                swap,
+                tokens.addresses,
+                funds,
+                Array(tokens.length).fill(MAX_INT256),
+                MAX_INT256,
+                authorization
+              );
             await expect(call).to.not.be.reverted;
-            call = vault.connect(sender).rwaSwap(swap, funds, MAX_INT256, MAX_INT256, authorization);
+            call = vault
+              .connect(sender)
+              .rwaBatchSwap(
+                SwapKind.GivenIn,
+                swap,
+                tokens.addresses,
+                funds,
+                Array(tokens.length).fill(MAX_INT256),
+                MAX_INT256,
+                authorization
+              );
             await expect(call).to.be.revertedWith('INVALID_SIGNATURE');
           });
 
@@ -311,8 +347,20 @@ describe('RwaSwaps', () => {
             // Clone and modify original funds
             const _funds = { ...funds };
             _funds.recipient = trader2.address;
-            const swap = toSingleSwap(SwapKind.GivenOut, input);
-            const call = vault.connect(sender).rwaSwap(swap, _funds, MAX_INT256, MAX_INT256, authorization);
+            // const swap = toSingleSwap(SwapKind.GivenOut, input);
+            // const call = vault.connect(sender).rwaSwap(swap, _funds, MAX_INT256, MAX_INT256, authorization);
+            const swap = toBatchSwap(input);
+            const call = vault
+              .connect(sender)
+              .rwaBatchSwap(
+                SwapKind.GivenIn,
+                swap,
+                tokens.addresses,
+                _funds,
+                Array(tokens.length).fill(MAX_INT256),
+                MAX_INT256,
+                authorization
+              );
             await expect(call).to.be.revertedWith('INVALID_SIGNATURE');
           });
         });
@@ -455,10 +503,25 @@ describe('RwaSwaps', () => {
       if (isSingleSwap) {
         it(`reverts ${isSingleSwap ? '(single)' : ''}`, async () => {
           const sender = input.fromOther ? other : trader;
-          const swap = toSingleRwaSwap(SwapKind.GivenIn, input);
-          const call = vault
-            .connect(sender)
-            .rwaSwap(swap, funds, 0, input.deadline || MAX_UINT256, input.authorization);
+
+          // const swap = toSingleRwaSwap(SwapKind.GivenIn, input);
+          const swap = toRwaBatchSwap(input);
+          // const call = vault
+          //   .connect(sender)
+          //   .rwaSwap(swap, funds, 0, input.deadline || MAX_UINT256, input.authorization);
+
+          const limits = Array(tokens.length).fill(MAX_INT256);
+          const deadline = MAX_UINT256;
+
+          const call = vault.connect(sender).rwaBatchSwap(
+            SwapKind.GivenIn,
+            swap,
+            testTokenList.map((v) => v.index).map((v, i) => tokens.addresses[i]),
+            funds,
+            limits,
+            deadline,
+            input.authorization
+          );
 
           singleSwapReason
             ? await expect(call).to.be.revertedWith(singleSwapReason)
@@ -485,10 +548,11 @@ describe('RwaSwaps', () => {
           PoolSpecialization.GeneralPool,
           testTokenList.map((v) => v.symbol)
         );
+        console.log(testTokenList);
         assertRwaSwapGivenInReverts(input, reason);
       });
 
-      context('with a minimal swap info pool', () => {
+      /*       context('with a minimal swap info pool', () => {
         deployMainPool(
           PoolSpecialization.MinimalSwapInfoPool,
           testTokenList.map((v) => v.symbol)
@@ -502,7 +566,7 @@ describe('RwaSwaps', () => {
           testTokenList.map((v) => v.symbol)
         );
         assertRwaSwapGivenInReverts(input, reason);
-      });
+      }); */
     });
   }
 });

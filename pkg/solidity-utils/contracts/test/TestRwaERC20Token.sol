@@ -3,13 +3,14 @@ pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "@balancer-labs/v2-interfaces/contracts/solidity-utils/openzeppelin/IERC20.sol";
+import "@balancer-labs/v2-interfaces/contracts/solidity-utils/openzeppelin/IERC165.sol";
 import "@balancer-labs/v2-interfaces/contracts/solidity-utils/openzeppelin/IERC20Permit.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/IRwaERC20.sol";
 import "../openzeppelin/ERC20.sol";
 import "../openzeppelin/ERC20Permit.sol";
 import "../openzeppelin/ERC20Burnable.sol";
 
-contract TestRwaERC20Token is ERC20, ERC20Permit, ERC20Burnable {
+contract TestRwaERC20Token is IRwaERC20, IERC165, ERC20, ERC20Permit, ERC20Burnable {
     // Store the max batch burn size
     uint16 private _maxBatchBurnSize;
 
@@ -38,12 +39,12 @@ contract TestRwaERC20Token is ERC20, ERC20Permit, ERC20Burnable {
     }
 
     // // Matching visibility of the parent ERC20 contract
-    // function decimals() public view override returns (uint8) {
-    //     return _decimals;
-    // }
+    function decimals() public view override returns (uint8) {
+        return _decimals;
+    }
 
     function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
-        return interfaceId == type(IRwaERC20).interfaceId;
+        return interfaceId == type(IRwaERC20).interfaceId || super.supportsInterface(interfaceId);
     }
 
     function maxBatchBurnSize() public view returns (uint16) {
@@ -54,19 +55,19 @@ contract TestRwaERC20Token is ERC20, ERC20Permit, ERC20Burnable {
         return _frozenAccounts[account];
     }
 
-    // function burn(uint256 amount) public {
-    //     // For testing, subtract from sender's balance
-    //     require(_balances[msg.sender] >= amount, "Insufficient balance");
-    //     _balances[msg.sender] -= amount;
-    //     emit Redeemed(amount);
-    // }
+    function burn(uint256 amount) public {
+        // For testing, subtract from sender's balance
+        require(_balances[msg.sender] >= amount, "Insufficient balance");
+        _balances[msg.sender] -= amount;
+        emit Redeemed(amount);
+    }
 
-    // function burnFrom(address account, uint256 amount) public {
-    //     // For testing, subtract from the account's balance
-    //     require(_balances[account] >= amount, "Insufficient balance");
-    //     _balances[account] -= amount;
-    //     emit Redeemed(amount);
-    // }
+    function burnFrom(address account, uint256 amount) public {
+        // For testing, subtract from the account's balance
+        require(_balances[account] >= amount, "Insufficient balance");
+        _balances[account] -= amount;
+        emit Redeemed(amount);
+    }
 
     function batchBurnFrom(address[] memory accounts, uint256[] memory amounts) public {
         require(accounts.length == amounts.length, "Mismatched inputs");
