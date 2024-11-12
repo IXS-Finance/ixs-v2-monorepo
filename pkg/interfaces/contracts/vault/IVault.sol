@@ -24,6 +24,7 @@ import "./IAsset.sol";
 import "./IAuthorizer.sol";
 import "./IFlashLoanRecipient.sol";
 import "./IProtocolFeesCollector.sol";
+import "./IPoolFees.sol";
 
 pragma solidity >=0.7.0 <0.9.0;
 
@@ -678,12 +679,12 @@ interface IVault is ISignaturesValidator, ITemporarilyPausable, IAuthentication 
      *
      * Emits `FlashLoan` events.
      */
-    function flashLoan(
-        IFlashLoanRecipient recipient,
-        IERC20[] memory tokens,
-        uint256[] memory amounts,
-        bytes memory userData
-    ) external;
+    // function flashLoan(
+    //     IFlashLoanRecipient recipient,
+    //     IERC20[] memory tokens,
+    //     uint256[] memory amounts,
+    //     bytes memory userData
+    // ) external;
 
     /**
      * @dev Emitted for each individual flash loan performed by `flashLoan`.
@@ -784,4 +785,14 @@ interface IVault is ISignaturesValidator, ITemporarilyPausable, IAuthentication 
      */
     function WETH() external view returns (IWETH);
     // solhint-disable-previous-line func-name-mixedcase
+
+    /**
+     * @dev Return address of Pool Fee collector contract
+     */
+    function getPoolFeeCollector() external view returns (IPoolFee);
+
+    /**
+     * @dev Return index ratio
+     */
+    function getIndexRatio(bytes32 _poolId, address _token) external view returns (uint256);
 }

@@ -34,6 +34,8 @@ import "./PoolBalances.sol";
 import "./balances/BalanceAllocation.sol";
 
 import "@balancer-labs/v2-interfaces/contracts/vault/IRwaERC20.sol";
+import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
+
 
 /**
  * Implements the Vault's high-level swap functionality.
@@ -56,6 +58,8 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
     using Math for uint256;
     using SafeCast for uint256;
     using BalanceAllocation for bytes32;
+
+    mapping(bytes32 => mapping(address => uint256)) private indexRatio;
 
     function batchSwap(
         SwapKind kind,
@@ -290,6 +294,14 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
         }
 
         (amountIn, amountOut) = _getAmounts(request.kind, request.amount, amountCalculated);
+        
+        // re-calculate swap fee
+        uint256 _swapFee = amountIn.mul(IProtocolFeesCollector(pool).getSwapFeePercentage());
+        
+        //update index ratio
+        _updates(request.poolId, address(request.tokenIn), _swapFee);
+
+
         emit Swap(request.poolId, request.tokenIn, request.tokenOut, amountIn, amountOut);
     }
 
@@ -379,7 +391,12 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
         amountCalculated = pool.onSwap(request, tokenInTotal, tokenOutTotal);
         (uint256 amountIn, uint256 amountOut) = _getAmounts(request.kind, request.amount, amountCalculated);
 
-        newTokenInBalance = tokenInBalance.increaseCash(amountIn);
+        // substract swap fee from tokenInBalance
+        uint256 _swapFee = amountIn.mul(IProtocolFeesCollector(address(pool)).getSwapFeePercentage());
+        //transfer _swapFee to PoolFee
+        uint afterSwapFee = amountIn.sub(_swapFee);
+
+        newTokenInBalance = tokenInBalance.increaseCash(afterSwapFee);
         newTokenOutBalance = tokenOutBalance.decreaseCash(amountOut);
     }
 
@@ -429,7 +446,13 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
         // Perform the swap request callback and compute the new balances for 'token in' and 'token out' after the swap
         amountCalculated = pool.onSwap(request, currentBalances, indexIn, indexOut);
         (uint256 amountIn, uint256 amountOut) = _getAmounts(request.kind, request.amount, amountCalculated);
-        tokenInBalance = tokenInBalance.increaseCash(amountIn);
+
+        // substract swap fee from tokenInBalance
+        uint256 _swapFee = amountIn.mul(IProtocolFeesCollector(address(pool)).getSwapFeePercentage());
+        //transfer _swapFee to PoolFee
+        uint afterSwapFee = amountIn.sub(_swapFee);
+
+        tokenInBalance = tokenInBalance.increaseCash(afterSwapFee);
         tokenOutBalance = tokenOutBalance.decreaseCash(amountOut);
 
         // Because no tokens were registered or deregistered between now or when we retrieved the indexes for
@@ -530,5 +553,28 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
                 revert(start, add(size, 36))
             }
         }
+    }
+
+    /**
+     * @dev update index ratio after each swap
+     * @param _poolId pool id
+     * @param _token tokenIn address
+     * @param _feeAount swapping fee
+     */
+    function _updates(bytes32 _poolId, address _token, uint256 _feeAount) internal{
+        // Only update on this pool if there is a fee
+        if (_feeAount == 0) return;
+        address _poolAddr;
+        (_poolAddr, ) = IVault(this).getPool(_poolId);
+        IERC20(_token).safeTransfer(address(IVault(this).getPoolFeeCollector()), _feeAount); // transfer the fees out to PoolFees
+        uint256 _ratio = (_feeAount * 1e18) / IERC20(_poolAddr).totalSupply(); // 1e18 adjustment is removed during claim
+        if (_ratio > 0) {
+            indexRatio[_poolId][_token] += _ratio;
+        }
+        // emit Fees(msg.sender, amount, 0);
+    }
+
+    function getIndexRatio(bytes32 _poolId, address _token) external override view returns (uint256) {
+        return indexRatio[_poolId][_token];
     }
 }

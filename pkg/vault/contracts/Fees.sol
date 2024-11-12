@@ -25,6 +25,7 @@ import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/SafeERC20.sol";
 
 import "./ProtocolFeesCollector.sol";
 import "./VaultAuthorization.sol";
+import "./PoolFees.sol";
 
 /**
  * @dev To reduce the bytecode size of the Vault, most of the protocol fee logic is not here, but in the
@@ -34,9 +35,11 @@ abstract contract Fees is IVault {
     using SafeERC20 for IERC20;
 
     ProtocolFeesCollector private immutable _protocolFeesCollector;
+    PoolFee private immutable _poolFeeCollector;
 
     constructor() {
         _protocolFeesCollector = new ProtocolFeesCollector(IVault(this));
+        _poolFeeCollector = new PoolFee(address(this));
     }
 
     function getProtocolFeesCollector() public view override returns (IProtocolFeesCollector) {
@@ -48,6 +51,10 @@ abstract contract Fees is IVault {
      */
     function _getProtocolSwapFeePercentage() internal view returns (uint256) {
         return getProtocolFeesCollector().getSwapFeePercentage();
+    }
+
+    function getPoolFeeCollector() public view override returns (IPoolFee) {
+        return _poolFeeCollector;
     }
 
     /**
