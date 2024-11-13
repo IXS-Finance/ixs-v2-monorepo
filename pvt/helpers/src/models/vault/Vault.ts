@@ -20,6 +20,7 @@ export default class Vault {
   instance: Contract;
   authorizer: Contract;
   authorizerAdaptor: Contract;
+  rwaRegistry: Contract;
   authorizerAdaptorEntrypoint: Contract;
   protocolFeesProvider: Contract;
   admin?: SignerWithAddress;
@@ -38,6 +39,7 @@ export default class Vault {
     instance: Contract,
     authorizer: Contract,
     authorizerAdaptor: Contract,
+    rwaRegistry: Contract,
     authorizerAdaptorEntrypoint: Contract,
     protocolFeesProvider: Contract,
     admin?: SignerWithAddress
@@ -46,6 +48,7 @@ export default class Vault {
     this.instance = instance;
     this.authorizer = authorizer;
     this.authorizerAdaptor = authorizerAdaptor;
+    this.rwaRegistry = rwaRegistry;
     this.authorizerAdaptorEntrypoint = authorizerAdaptorEntrypoint;
     this.protocolFeesProvider = protocolFeesProvider;
     this.admin = admin;

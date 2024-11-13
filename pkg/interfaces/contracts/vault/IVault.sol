@@ -24,6 +24,7 @@ import "./IAsset.sol";
 import "./IAuthorizer.sol";
 import "./IFlashLoanRecipient.sol";
 import "./IProtocolFeesCollector.sol";
+import "./RwaDataTypes.sol";
 
 pragma solidity >=0.7.0 <0.9.0;
 
@@ -517,20 +518,13 @@ interface IVault is ISignaturesValidator, ITemporarilyPausable, IAuthentication 
         uint256 deadline
     ) external payable returns (uint256);
 
-    function rwaSwap(
-        SingleSwap memory singleSwap,
-        FundManagement memory funds,
-        uint256 limit,
-        uint256 deadline,
-        RwaAuthorizationData calldata authorization
-    ) external payable returns (uint256);
-
-    struct RwaAuthorizationData {
-        address operator;
-        uint8 v;
-        bytes32 r;
-        bytes32 s;
-    }
+    // function rwaSwap(
+    //     SingleSwap memory singleSwap,
+    //     FundManagement memory funds,
+    //     uint256 limit,
+    //     uint256 deadline,
+    //     RwaDataTypes.RwaAuthorizationData calldata authorization
+    // ) external payable returns (uint256);
 
     /**
      * @dev Data for a single swap executed by `swap`. `amount` is either `amountIn` or `amountOut` depending on
@@ -587,6 +581,16 @@ interface IVault is ISignaturesValidator, ITemporarilyPausable, IAuthentication 
         FundManagement memory funds,
         int256[] memory limits,
         uint256 deadline
+    ) external payable returns (int256[] memory);
+
+    function rwaBatchSwap(
+        SwapKind kind,
+        BatchSwapStep[] memory swaps,
+        IAsset[] memory assets,
+        FundManagement memory funds,
+        int256[] memory limits,
+        uint256 deadline,
+        RwaDataTypes.RwaAuthorizationData calldata authorization
     ) external payable returns (int256[] memory);
 
     /**
@@ -678,12 +682,12 @@ interface IVault is ISignaturesValidator, ITemporarilyPausable, IAuthentication 
      *
      * Emits `FlashLoan` events.
      */
-    function flashLoan(
-        IFlashLoanRecipient recipient,
-        IERC20[] memory tokens,
-        uint256[] memory amounts,
-        bytes memory userData
-    ) external;
+    // function flashLoan(
+    //     IFlashLoanRecipient recipient,
+    //     IERC20[] memory tokens,
+    //     uint256[] memory amounts,
+    //     bytes memory userData
+    // ) external;
 
     /**
      * @dev Emitted for each individual flash loan performed by `flashLoan`.

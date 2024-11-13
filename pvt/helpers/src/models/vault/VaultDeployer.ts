@@ -10,6 +10,7 @@ import Vault from './Vault';
 import TypesConverter from '../types/TypesConverter';
 import TokensDeployer from '../tokens/TokensDeployer';
 import { actionId } from '../misc/actions';
+import RwaRegistry from '../rwaRegistry/RwaRegistry';
 
 export default {
   async deploy(params: RawVaultDeployment): Promise<Vault> {
@@ -24,7 +25,12 @@ export default {
     // This sequence breaks the circular dependency between authorizer, vault, adaptor and entrypoint.
     // First we deploy the vault, adaptor and entrypoint with a basic authorizer.
     const basicAuthorizer = await this._deployBasicAuthorizer(admin);
-    const vault = await (mocked ? this._deployMocked : this._deployReal)(deployment, basicAuthorizer);
+    const rwaRegistry = await RwaRegistry.create({ from });
+    const vault = await (mocked ? this._deployMocked : this._deployReal)(
+      deployment,
+      basicAuthorizer,
+      rwaRegistry.instance
+    );
     const authorizerAdaptor = await this._deployAuthorizerAdaptor(vault, from);
     const adaptorEntrypoint = await this._deployAuthorizerAdaptorEntrypoint(authorizerAdaptor);
     const protocolFeeProvider = await this._deployProtocolFeeProvider(
@@ -44,14 +50,23 @@ export default {
       authorizer = basicAuthorizer;
     }
 
-    return new Vault(mocked, vault, authorizer, authorizerAdaptor, adaptorEntrypoint, protocolFeeProvider, admin);
+    return new Vault(
+      mocked,
+      vault,
+      authorizer,
+      authorizerAdaptor,
+      rwaRegistry.instance,
+      adaptorEntrypoint,
+      protocolFeeProvider,
+      admin
+    );
   },
 
-  async _deployReal(deployment: VaultDeployment, authorizer: Contract): Promise<Contract> {
+  async _deployReal(deployment: VaultDeployment, authorizer: Contract, rwaRegistry: Contract): Promise<Contract> {
     const { from, pauseWindowDuration, bufferPeriodDuration } = deployment;
     const weth = await TokensDeployer.deployToken({ symbol: 'WETH' });
 
-    const args = [authorizer.address, weth.address, pauseWindowDuration, bufferPeriodDuration];
+    const args = [authorizer.address, weth.address, rwaRegistry.address, pauseWindowDuration, bufferPeriodDuration];
     return deploy('v2-vault/Vault', { args, from });
   },
 

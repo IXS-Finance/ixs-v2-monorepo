@@ -71,7 +71,11 @@ type TestTokenObject = {
 };
 
 describe('RwaSwaps', () => {
-  let vault: Contract, authorizer: Contract, funds: FundManagement, emptyAuthorization: RwaAuthorizationData;
+  let vault: Contract,
+    authorizer: Contract,
+    rwaRegistry: Contract,
+    funds: FundManagement,
+    emptyAuthorization: RwaAuthorizationData;
   let tokens: TokenList;
   let mainPoolId: string, secondaryPoolId: string;
   let lp: SignerWithAddress,
@@ -88,7 +92,7 @@ describe('RwaSwaps', () => {
   sharedBeforeEach('deploy vault and tokens', async () => {
     tokens = await TokenList.create(['DAI', 'MKR', 'RWATT', 'RWATT2']);
 
-    ({ instance: vault, authorizer } = await Vault.create({ admin }));
+    ({ instance: vault, authorizer, rwaRegistry } = await Vault.create({ admin }));
 
     // Contortions required to get the Vault's version of WETH to be in tokens
     const wethContract = await deployedAt('v2-standalone-utils/TestWETH', await vault.WETH());
@@ -99,6 +103,9 @@ describe('RwaSwaps', () => {
 
     await tokens.mint({ to: [lp, trader, trader2], amount: bn(200e18) });
     await tokens.approve({ to: vault, from: [lp, trader, trader2], amount: MAX_UINT112 });
+
+    await rwaRegistry.connect(admin).addToken(tokens.addresses[2]);
+    await rwaRegistry.connect(admin).addToken(tokens.addresses[3]);
   });
 
   beforeEach('set up default sender', async () => {
@@ -223,7 +230,8 @@ describe('RwaSwaps', () => {
             await authorizer.connect(admin).grantPermission(operatorRole, operatorAddress, ANY_ADDRESS);
             const _SWAP_TYPE_HASH = '0xe192dcbc143b1e244ad73b813fd3c097b832ad260a157340b4e5e5beda067abe';
             const to = funds.recipient;
-            const nonce = await vault.connect(lp).getNextNonceByOperator(operatorAddress, to);
+            // const nonce = await vault.connect(lp).getNextNonceByOperator(operatorAddress, to);
+            const nonce = await rwaRegistry.connect(lp).getNextNonceByOperator(operatorAddress, to);
             const deadline = MAX_INT256;
 
             const structHash = ethers.utils.keccak256(
@@ -253,6 +261,7 @@ describe('RwaSwaps', () => {
 
             // Output the components
           });
+
           it('should pass _verifyRwaSwapSignature', async () => {
             mainPoolId = await deployPool(
               PoolSpecialization.GeneralPool,
@@ -267,8 +276,20 @@ describe('RwaSwaps', () => {
             };
             const input = { swaps };
             const sender = trader;
-            const swap = toSingleSwap(SwapKind.GivenOut, input);
-            const call = vault.connect(sender).rwaSwap(swap, funds, MAX_INT256, MAX_INT256, authorization);
+            // const swap = toSingleSwap(SwapKind.GivenOut, input);
+            const swap = toBatchSwap(input);
+            // const call = vault.connect(sender).rwaSwap(swap, funds, MAX_INT256, MAX_INT256, authorization);
+            const call = vault.connect(sender).rwaBatchSwap(
+              SwapKind.GivenIn,
+              swap,
+              // testTokenList.map((v) => v.index).map((v, i) => tokens.addresses[i]),
+              tokens.addresses,
+              funds,
+              Array(tokens.length).fill(MAX_INT256),
+              MAX_INT256,
+              authorization
+            );
+
             await expect(call).to.not.be.reverted;
           });
 
@@ -286,10 +307,30 @@ describe('RwaSwaps', () => {
             };
             const input = { swaps };
             const sender = trader;
-            const swap = toSingleSwap(SwapKind.GivenOut, input);
-            let call = vault.connect(sender).rwaSwap(swap, funds, MAX_INT256, MAX_INT256, authorization);
+            const swap = toBatchSwap(input);
+            let call = vault
+              .connect(sender)
+              .rwaBatchSwap(
+                SwapKind.GivenIn,
+                swap,
+                tokens.addresses,
+                funds,
+                Array(tokens.length).fill(MAX_INT256),
+                MAX_INT256,
+                authorization
+              );
             await expect(call).to.not.be.reverted;
-            call = vault.connect(sender).rwaSwap(swap, funds, MAX_INT256, MAX_INT256, authorization);
+            call = vault
+              .connect(sender)
+              .rwaBatchSwap(
+                SwapKind.GivenIn,
+                swap,
+                tokens.addresses,
+                funds,
+                Array(tokens.length).fill(MAX_INT256),
+                MAX_INT256,
+                authorization
+              );
             await expect(call).to.be.revertedWith('INVALID_SIGNATURE');
           });
 
@@ -311,8 +352,18 @@ describe('RwaSwaps', () => {
             // Clone and modify original funds
             const _funds = { ...funds };
             _funds.recipient = trader2.address;
-            const swap = toSingleSwap(SwapKind.GivenOut, input);
-            const call = vault.connect(sender).rwaSwap(swap, _funds, MAX_INT256, MAX_INT256, authorization);
+            const swap = toBatchSwap(input);
+            const call = vault
+              .connect(sender)
+              .rwaBatchSwap(
+                SwapKind.GivenIn,
+                swap,
+                tokens.addresses,
+                _funds,
+                Array(tokens.length).fill(MAX_INT256),
+                MAX_INT256,
+                authorization
+              );
             await expect(call).to.be.revertedWith('INVALID_SIGNATURE');
           });
         });
@@ -455,10 +506,15 @@ describe('RwaSwaps', () => {
       if (isSingleSwap) {
         it(`reverts ${isSingleSwap ? '(single)' : ''}`, async () => {
           const sender = input.fromOther ? other : trader;
-          const swap = toSingleRwaSwap(SwapKind.GivenIn, input);
+
+          const swap = toRwaBatchSwap(input);
+
+          const limits = Array(tokens.length).fill(MAX_INT256);
+          const deadline = MAX_UINT256;
+
           const call = vault
             .connect(sender)
-            .rwaSwap(swap, funds, 0, input.deadline || MAX_UINT256, input.authorization);
+            .rwaBatchSwap(SwapKind.GivenIn, swap, tokens.addresses, funds, limits, deadline, input.authorization);
 
           singleSwapReason
             ? await expect(call).to.be.revertedWith(singleSwapReason)

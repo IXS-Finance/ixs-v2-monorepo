@@ -19,10 +19,9 @@ import "@balancer-labs/v2-interfaces/contracts/solidity-utils/misc/IWETH.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/IAuthorizer.sol";
 
 import "./VaultAuthorization.sol";
-import "./FlashLoans.sol";
 import "./Swaps.sol";
-import "./RwaAuthorization.sol";
-import "@balancer-labs/v2-interfaces/contracts/vault/IRwaERC20.sol";
+import "@balancer-labs/v2-interfaces/contracts/vault/RwaDataTypes.sol";
+import "@balancer-labs/v2-interfaces/contracts/vault/IRwaRegistry.sol";
 
 /**
  * @dev The `Vault` is Balancer V2's core contract. A single instance of it exists for the entire network, and it is the
@@ -59,14 +58,18 @@ import "@balancer-labs/v2-interfaces/contracts/vault/IRwaERC20.sol";
  * utilization of `internal` functions (particularly inside modifiers), usage of named return arguments, dedicated
  * storage access methods, dynamic revert reason generation, and usage of inline assembly, to name a few.
  */
-contract Vault is RwaAuthorization, FlashLoans, Swaps {
+contract Vault is VaultAuthorization, Swaps {
+    IRwaRegistry public rwaRegistry;
+
     constructor(
         IAuthorizer authorizer,
         IWETH weth,
+        IRwaRegistry _rwaRegistry,
         uint256 pauseWindowDuration,
         uint256 bufferPeriodDuration
-    ) RwaAuthorization(authorizer) AssetHelpers(weth) TemporarilyPausable(pauseWindowDuration, bufferPeriodDuration) {
+    ) VaultAuthorization(authorizer) AssetHelpers(weth) TemporarilyPausable(pauseWindowDuration, bufferPeriodDuration) {
         // solhint-disable-previous-line no-empty-blocks
+        rwaRegistry = _rwaRegistry;
     }
 
     function setPaused(bool paused) external override nonReentrant authenticate {
@@ -76,6 +79,54 @@ contract Vault is RwaAuthorization, FlashLoans, Swaps {
     // solhint-disable-next-line func-name-mixedcase
     function WETH() external view override returns (IWETH) {
         return _WETH();
+    }
+
+    function batchSwap(
+        SwapKind kind,
+        BatchSwapStep[] memory swaps,
+        IAsset[] memory assets,
+        FundManagement memory funds,
+        int256[] memory limits,
+        uint256 deadline
+    )
+        external
+        payable
+        override
+        nonReentrant
+        whenNotPaused
+        authenticateFor(funds.sender)
+        returns (int256[] memory assetDeltas)
+    {
+        _require(!rwaRegistry.isRwaBatchSwap(swaps, assets), Errors.INVALID_TOKEN);
+        return _batchSwap(kind, swaps, assets, funds, limits, deadline);
+    }
+
+    function rwaBatchSwap(
+        SwapKind kind,
+        BatchSwapStep[] memory swaps,
+        IAsset[] memory assets,
+        FundManagement memory funds,
+        int256[] memory limits,
+        uint256 deadline,
+        RwaDataTypes.RwaAuthorizationData calldata authorization
+    )
+        external
+        payable
+        override
+        nonReentrant
+        whenNotPaused
+        authenticateFor(funds.sender)
+        returns (int256[] memory assetDeltas)
+    {
+        _require(rwaRegistry.isRwaBatchSwap(swaps, assets), Errors.INVALID_TOKEN);
+        rwaRegistry.verifyRwaSwapSignature(
+            funds.recipient,
+            authorization,
+            deadline,
+            getAuthorizer(),
+            _domainSeparatorV4()
+        );
+        return _batchSwap(kind, swaps, assets, funds, limits, deadline);
     }
 
     function swap(
@@ -92,27 +143,7 @@ contract Vault is RwaAuthorization, FlashLoans, Swaps {
         authenticateFor(funds.sender)
         returns (uint256 amountCalculated)
     {
-        _require(!_isRwaSwap(singleSwap.assetIn, singleSwap.assetOut), Errors.INVALID_TOKEN);
-        return _swap(singleSwap, funds, limit, deadline);
-    }
-
-    function rwaSwap(
-        SingleSwap memory singleSwap,
-        FundManagement memory funds,
-        uint256 limit,
-        uint256 deadline,
-        RwaAuthorizationData calldata authorization
-    )
-        external
-        payable
-        override
-        nonReentrant
-        whenNotPaused
-        authenticateFor(funds.sender)
-        returns (uint256 amountCalculated)
-    {
-        _require(_isRwaSwap(singleSwap.assetIn, singleSwap.assetOut), Errors.INVALID_TOKEN);
-        _verifyRwaSwapSignature(funds.recipient, authorization, deadline);
+        _require(!rwaRegistry.isRwaSwap(singleSwap.assetIn, singleSwap.assetOut), Errors.INVALID_TOKEN);
         return _swap(singleSwap, funds, limit, deadline);
     }
 }
