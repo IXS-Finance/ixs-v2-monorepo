@@ -97,7 +97,6 @@ contract Vault is VaultAuthorization, Swaps {
         authenticateFor(funds.sender)
         returns (int256[] memory assetDeltas)
     {
-        // _rwaRegistry.isNotRwaBatchSwap(assets);
         _require(!_rwaRegistry.isRwaBatchSwap(swaps, assets), Errors.INVALID_TOKEN);
         return _batchSwap(kind, swaps, assets, funds, limits, deadline);
     }
@@ -144,8 +143,6 @@ contract Vault is VaultAuthorization, Swaps {
         authenticateFor(funds.sender)
         returns (uint256 amountCalculated)
     {
-        // _rwaRegistry.isNotRwaSwap(singleSwap.assetIn, singleSwap.assetOut);
-
         _require(!_rwaRegistry.isRwaSwap(singleSwap.assetIn, singleSwap.assetOut), Errors.INVALID_TOKEN);
         return _swap(singleSwap, funds, limit, deadline);
     }

@@ -48,14 +48,6 @@ contract RwaRegistry is IRwaRegistry {
         return isRwaToken(address(assetIn)) || isRwaToken(address(assetOut));
     }
 
-    // function isRwaSwap(IAsset assetIn, IAsset assetOut) external view override {
-    //     _require(_isRwaSwap(assetIn, assetOut), Errors.INVALID_TOKEN);
-    // }
-
-    // function isNotRwaSwap(IAsset assetIn, IAsset assetOut) external view override {
-    //     _require(!_isRwaSwap(assetIn, assetOut), Errors.INVALID_TOKEN);
-    // }
-
     function isRwaBatchSwap(IVault.BatchSwapStep[] calldata swaps, IAsset[] calldata assets)
         external
         view
@@ -64,6 +56,15 @@ contract RwaRegistry is IRwaRegistry {
     {
         bool hasRwaToken = false;
         for (uint256 i = 0; i < swaps.length; ++i) {
+            /**
+             * very edge case
+             * implement this check in order to ensure all Swaps unit tests passed without any modifications
+             * when batchSwap is called with out-of-bound indexes, mark it as non-rwaBatchswap immediately to delegate checks to beneath code
+             * when rwaBatchSwap is called with out-of-bound indexes, it will be marked as non-rwaBatchSwap and throw INVALID_TOKEN error even though it might be a rwaBatchSwap
+             */
+            if (swaps[i].assetInIndex >= assets.length || swaps[i].assetOutIndex >= assets.length) {
+                break;
+            }
             if (
                 isRwaToken(address(assets[swaps[i].assetInIndex])) ||
                 isRwaToken(address(assets[swaps[i].assetOutIndex]))

@@ -307,10 +307,7 @@ describe('RwaSwaps', () => {
             };
             const input = { swaps };
             const sender = trader;
-            // const swap = toSingleSwap(SwapKind.GivenOut, input);
-            // let call = vault.connect(sender).rwaSwap(swap, funds, MAX_INT256, MAX_INT256, authorization);
             const swap = toBatchSwap(input);
-            // const call = vault.connect(sender).rwaSwap(swap, funds, MAX_INT256, MAX_INT256, authorization);
             let call = vault
               .connect(sender)
               .rwaBatchSwap(
@@ -355,8 +352,6 @@ describe('RwaSwaps', () => {
             // Clone and modify original funds
             const _funds = { ...funds };
             _funds.recipient = trader2.address;
-            // const swap = toSingleSwap(SwapKind.GivenOut, input);
-            // const call = vault.connect(sender).rwaSwap(swap, _funds, MAX_INT256, MAX_INT256, authorization);
             const swap = toBatchSwap(input);
             const call = vault
               .connect(sender)
@@ -512,25 +507,14 @@ describe('RwaSwaps', () => {
         it(`reverts ${isSingleSwap ? '(single)' : ''}`, async () => {
           const sender = input.fromOther ? other : trader;
 
-          // const swap = toSingleRwaSwap(SwapKind.GivenIn, input);
           const swap = toRwaBatchSwap(input);
-          // const call = vault
-          //   .connect(sender)
-          //   .rwaSwap(swap, funds, 0, input.deadline || MAX_UINT256, input.authorization);
 
           const limits = Array(tokens.length).fill(MAX_INT256);
           const deadline = MAX_UINT256;
 
-          const call = vault.connect(sender).rwaBatchSwap(
-            SwapKind.GivenIn,
-            swap,
-            // testTokenList.map((v) => v.index).map((v, i) => tokens.addresses[i]),
-            tokens.addresses,
-            funds,
-            limits,
-            deadline,
-            input.authorization
-          );
+          const call = vault
+            .connect(sender)
+            .rwaBatchSwap(SwapKind.GivenIn, swap, tokens.addresses, funds, limits, deadline, input.authorization);
 
           singleSwapReason
             ? await expect(call).to.be.revertedWith(singleSwapReason)
