@@ -54,7 +54,6 @@ contract RwaRegistry is IRwaRegistry {
         override
         returns (bool)
     {
-        bool hasRwaToken = false;
         for (uint256 i = 0; i < swaps.length; ++i) {
             /**
              * very edge case
@@ -63,17 +62,16 @@ contract RwaRegistry is IRwaRegistry {
              * when rwaBatchSwap is called with out-of-bound indexes, it will be marked as non-rwaBatchSwap and throw INVALID_TOKEN error even though it might be a rwaBatchSwap
              */
             if (swaps[i].assetInIndex >= assets.length || swaps[i].assetOutIndex >= assets.length) {
-                return hasRwaToken;
+                return false;
             }
             if (
                 isRwaToken(address(assets[swaps[i].assetInIndex])) ||
                 isRwaToken(address(assets[swaps[i].assetOutIndex]))
             ) {
-                hasRwaToken = true;
-                break;
+                return true;
             }
         }
-        return hasRwaToken;
+        return false;
     }
 
     function verifyRwaSwapSignature(
