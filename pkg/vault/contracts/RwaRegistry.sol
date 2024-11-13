@@ -63,7 +63,7 @@ contract RwaRegistry is IRwaRegistry {
              * when rwaBatchSwap is called with out-of-bound indexes, it will be marked as non-rwaBatchSwap and throw INVALID_TOKEN error even though it might be a rwaBatchSwap
              */
             if (swaps[i].assetInIndex >= assets.length || swaps[i].assetOutIndex >= assets.length) {
-                break;
+                return hasRwaToken;
             }
             if (
                 isRwaToken(address(assets[swaps[i].assetInIndex])) ||

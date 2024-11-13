@@ -59,17 +59,17 @@ import "@balancer-labs/v2-interfaces/contracts/vault/IRwaRegistry.sol";
  * storage access methods, dynamic revert reason generation, and usage of inline assembly, to name a few.
  */
 contract Vault is VaultAuthorization, Swaps {
-    IRwaRegistry private _rwaRegistry;
+    IRwaRegistry public rwaRegistry;
 
     constructor(
         IAuthorizer authorizer,
         IWETH weth,
-        IRwaRegistry rwaRegistry,
+        IRwaRegistry _rwaRegistry,
         uint256 pauseWindowDuration,
         uint256 bufferPeriodDuration
     ) VaultAuthorization(authorizer) AssetHelpers(weth) TemporarilyPausable(pauseWindowDuration, bufferPeriodDuration) {
         // solhint-disable-previous-line no-empty-blocks
-        _rwaRegistry = rwaRegistry;
+        rwaRegistry = _rwaRegistry;
     }
 
     function setPaused(bool paused) external override nonReentrant authenticate {
@@ -97,7 +97,7 @@ contract Vault is VaultAuthorization, Swaps {
         authenticateFor(funds.sender)
         returns (int256[] memory assetDeltas)
     {
-        _require(!_rwaRegistry.isRwaBatchSwap(swaps, assets), Errors.INVALID_TOKEN);
+        _require(!rwaRegistry.isRwaBatchSwap(swaps, assets), Errors.INVALID_TOKEN);
         return _batchSwap(kind, swaps, assets, funds, limits, deadline);
     }
 
@@ -118,8 +118,8 @@ contract Vault is VaultAuthorization, Swaps {
         authenticateFor(funds.sender)
         returns (int256[] memory assetDeltas)
     {
-        _require(_rwaRegistry.isRwaBatchSwap(swaps, assets), Errors.INVALID_TOKEN);
-        _rwaRegistry.verifyRwaSwapSignature(
+        _require(rwaRegistry.isRwaBatchSwap(swaps, assets), Errors.INVALID_TOKEN);
+        rwaRegistry.verifyRwaSwapSignature(
             funds.recipient,
             authorization,
             deadline,
@@ -143,7 +143,7 @@ contract Vault is VaultAuthorization, Swaps {
         authenticateFor(funds.sender)
         returns (uint256 amountCalculated)
     {
-        _require(!_rwaRegistry.isRwaSwap(singleSwap.assetIn, singleSwap.assetOut), Errors.INVALID_TOKEN);
+        _require(!rwaRegistry.isRwaSwap(singleSwap.assetIn, singleSwap.assetOut), Errors.INVALID_TOKEN);
         return _swap(singleSwap, funds, limit, deadline);
     }
 }

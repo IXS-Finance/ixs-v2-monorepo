@@ -29,7 +29,8 @@ describe('VaultAuthorization', function () {
   });
 
   async function deployVault(authorizer: string): Promise<Contract> {
-    return deploy('Vault', { args: [authorizer, ZERO_ADDRESS, 0, 0] });
+    const rwaRegistry = await deploy('RwaRegistry');
+    return deploy('Vault', { args: [authorizer, ZERO_ADDRESS, rwaRegistry.address, 0, 0] });
   }
 
   describe('authorizer', () => {
