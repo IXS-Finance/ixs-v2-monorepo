@@ -16,6 +16,7 @@ pragma experimental ABIEncoderV2;
 
 import "@balancer-labs/v2-interfaces/contracts/vault/IAuthorizer.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/IAsset.sol";
+import "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/RwaDataTypes.sol";
 
 interface IRwaRegistry {
@@ -32,13 +33,12 @@ interface IRwaRegistry {
 
     function isRwaToken(address tokenAddress) external view returns (bool);
 
-    function isRwaSwap(IAsset assetIn, IAsset assetOut) external view;
+    function isRwaSwap(IAsset assetIn, IAsset assetOut) external view returns (bool);
 
-    function isNotRwaSwap(IAsset assetIn, IAsset assetOut) external view;
-
-    function isRwaBatchSwap(IAsset[] calldata assets) external view;
-
-    function isNotRwaBatchSwap(IAsset[] calldata assets) external view;
+    function isRwaBatchSwap(IVault.BatchSwapStep[] calldata swaps, IAsset[] calldata assets)
+        external
+        view
+        returns (bool);
 
     function verifyRwaSwapSignature(
         address to,

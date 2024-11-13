@@ -17,11 +17,12 @@ pragma experimental ABIEncoderV2;
 
 import "@balancer-labs/v2-interfaces/contracts/vault/IRwaRegistry.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/IAsset.sol";
+import "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
 import "@balancer-labs/v2-interfaces/contracts/solidity-utils/helpers/BalancerErrors.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/RwaDataTypes.sol";
 
 contract RwaRegistry is IRwaRegistry {
-    bytes32 internal constant _OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
+    bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     // this is copied from VaultAuthorization.sol
     bytes32 internal constant _SWAP_TYPE_HASH = 0xe192dcbc143b1e244ad73b813fd3c097b832ad260a157340b4e5e5beda067abe;
     mapping(address => bool) internal _isRwaToken;
@@ -43,34 +44,35 @@ contract RwaRegistry is IRwaRegistry {
         return _isRwaToken[tokenAddress];
     }
 
-    function _isRwaSwap(IAsset assetIn, IAsset assetOut) internal view returns (bool) {
+    function isRwaSwap(IAsset assetIn, IAsset assetOut) external view override returns (bool) {
         return isRwaToken(address(assetIn)) || isRwaToken(address(assetOut));
     }
 
-    function isRwaSwap(IAsset assetIn, IAsset assetOut) external view override {
-        _require(_isRwaSwap(assetIn, assetOut), Errors.INVALID_TOKEN);
-    }
+    // function isRwaSwap(IAsset assetIn, IAsset assetOut) external view override {
+    //     _require(_isRwaSwap(assetIn, assetOut), Errors.INVALID_TOKEN);
+    // }
 
-    function isNotRwaSwap(IAsset assetIn, IAsset assetOut) external view override {
-        _require(!_isRwaSwap(assetIn, assetOut), Errors.INVALID_TOKEN);
-    }
+    // function isNotRwaSwap(IAsset assetIn, IAsset assetOut) external view override {
+    //     _require(!_isRwaSwap(assetIn, assetOut), Errors.INVALID_TOKEN);
+    // }
 
-    function _isRwaBatchSwap(IAsset[] calldata assets) internal view returns (bool) {
+    function isRwaBatchSwap(IVault.BatchSwapStep[] calldata swaps, IAsset[] calldata assets)
+        external
+        view
+        override
+        returns (bool)
+    {
         bool hasRwaToken = false;
-        for (uint256 i = 0; i < assets.length; ++i) {
-            if (isRwaToken(address(assets[i]))) {
+        for (uint256 i = 0; i < swaps.length; ++i) {
+            if (
+                isRwaToken(address(assets[swaps[i].assetInIndex])) ||
+                isRwaToken(address(assets[swaps[i].assetOutIndex]))
+            ) {
+                hasRwaToken = true;
                 break;
             }
         }
         return hasRwaToken;
-    }
-
-    function isRwaBatchSwap(IAsset[] calldata assets) external view override {
-        _require(_isRwaBatchSwap(assets), Errors.INVALID_TOKEN);
-    }
-
-    function isNotRwaBatchSwap(IAsset[] calldata assets) external view override {
-        _require(!_isRwaBatchSwap(assets), Errors.INVALID_TOKEN);
     }
 
     function verifyRwaSwapSignature(
@@ -81,7 +83,7 @@ contract RwaRegistry is IRwaRegistry {
         bytes32 domainSeparatorV4
     ) external override {
         // Check if the operator has the required role
-        bool canPerform = authorizer.canPerform(_OPERATOR_ROLE, authorization.operator, address(this));
+        bool canPerform = authorizer.canPerform(OPERATOR_ROLE, authorization.operator, address(this));
         _require(canPerform, Errors.SENDER_NOT_ALLOWED);
 
         bytes32 structHash = keccak256(

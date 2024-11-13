@@ -13,7 +13,7 @@ export default {
     const { from } = deployment;
 
     // Deploy the RwaRegistry contract
-    const instance = await deploy('RwaRegistry', { from });
+    const instance = await deploy('v2-vault/RwaRegistry', { from });
 
     // Create and return the RwaRegistry instance
     return new RwaRegistry(instance);

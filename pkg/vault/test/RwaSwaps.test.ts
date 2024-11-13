@@ -71,7 +71,11 @@ type TestTokenObject = {
 };
 
 describe('RwaSwaps', () => {
-  let vault: Contract, authorizer: Contract, funds: FundManagement, emptyAuthorization: RwaAuthorizationData;
+  let vault: Contract,
+    authorizer: Contract,
+    rwaRegistry: Contract,
+    funds: FundManagement,
+    emptyAuthorization: RwaAuthorizationData;
   let tokens: TokenList;
   let mainPoolId: string, secondaryPoolId: string;
   let lp: SignerWithAddress,
@@ -88,7 +92,7 @@ describe('RwaSwaps', () => {
   sharedBeforeEach('deploy vault and tokens', async () => {
     tokens = await TokenList.create(['DAI', 'MKR', 'RWATT', 'RWATT2']);
 
-    ({ instance: vault, authorizer } = await Vault.create({ admin }));
+    ({ instance: vault, authorizer, rwaRegistry } = await Vault.create({ admin }));
 
     // Contortions required to get the Vault's version of WETH to be in tokens
     const wethContract = await deployedAt('v2-standalone-utils/TestWETH', await vault.WETH());
@@ -99,6 +103,9 @@ describe('RwaSwaps', () => {
 
     await tokens.mint({ to: [lp, trader, trader2], amount: bn(200e18) });
     await tokens.approve({ to: vault, from: [lp, trader, trader2], amount: MAX_UINT112 });
+
+    await rwaRegistry.connect(admin).addToken(tokens.addresses[2]);
+    await rwaRegistry.connect(admin).addToken(tokens.addresses[3]);
   });
 
   beforeEach('set up default sender', async () => {
@@ -109,60 +116,60 @@ describe('RwaSwaps', () => {
       toInternalBalance: false,
     };
   });
-  // context('swaps function should throw error if one of tokens is RWA token', () => {
-  //   context('with two tokens. one of them is RWA token. the other is ERC20 token', () => {
-  //     const testTokenList = [
-  //       { symbol: 'DAI', index: 0 },
-  //       { symbol: 'RWATT', index: 2 },
-  //     ];
+  context('swaps function should throw error if one of tokens is RWA token', () => {
+    context('with two tokens. one of them is RWA token. the other is ERC20 token', () => {
+      const testTokenList = [
+        { symbol: 'DAI', index: 0 },
+        { symbol: 'RWATT', index: 2 },
+      ];
 
-  //     context('with a general pool', () => {
-  //       itHandlesSwapsProperly(PoolSpecialization.GeneralPool, testTokenList);
-  //     });
+      context('with a general pool', () => {
+        itHandlesSwapsProperly(PoolSpecialization.GeneralPool, testTokenList);
+      });
 
-  //     context('with a minimal swap info pool', () => {
-  //       itHandlesSwapsProperly(PoolSpecialization.MinimalSwapInfoPool, testTokenList);
-  //     });
+      context('with a minimal swap info pool', () => {
+        itHandlesSwapsProperly(PoolSpecialization.MinimalSwapInfoPool, testTokenList);
+      });
 
-  //     context('with a two token pool', () => {
-  //       itHandlesSwapsProperly(PoolSpecialization.TwoTokenPool, testTokenList);
-  //     });
-  //   });
-  //   context('with two tokens. All of them are RWA tokens', () => {
-  //     const testTokenList = [
-  //       { symbol: 'RWATT', index: 2 },
-  //       { symbol: 'RWATT2', index: 3 },
-  //     ];
+      context('with a two token pool', () => {
+        itHandlesSwapsProperly(PoolSpecialization.TwoTokenPool, testTokenList);
+      });
+    });
+    context('with two tokens. All of them are RWA tokens', () => {
+      const testTokenList = [
+        { symbol: 'RWATT', index: 2 },
+        { symbol: 'RWATT2', index: 3 },
+      ];
 
-  //     context('with a general pool', () => {
-  //       itHandlesSwapsProperly(PoolSpecialization.GeneralPool, testTokenList);
-  //     });
+      context('with a general pool', () => {
+        itHandlesSwapsProperly(PoolSpecialization.GeneralPool, testTokenList);
+      });
 
-  //     context('with a minimal swap info pool', () => {
-  //       itHandlesSwapsProperly(PoolSpecialization.MinimalSwapInfoPool, testTokenList);
-  //     });
+      context('with a minimal swap info pool', () => {
+        itHandlesSwapsProperly(PoolSpecialization.MinimalSwapInfoPool, testTokenList);
+      });
 
-  //     context('with a two token pool', () => {
-  //       itHandlesSwapsProperly(PoolSpecialization.TwoTokenPool, testTokenList);
-  //     });
-  //   });
-  // });
+      context('with a two token pool', () => {
+        itHandlesSwapsProperly(PoolSpecialization.TwoTokenPool, testTokenList);
+      });
+    });
+  });
 
   context('rwaSwaps function should throw error', () => {
-    // context('if none of tokens are RWA tokens', () => {
-    //   const testTokenList = [
-    //     { symbol: 'DAI', index: 0 },
-    //     { symbol: 'MKR', index: 1 },
-    //   ];
-    //   const emptyAuthorization = {
-    //     operator: ethers.constants.AddressZero,
-    //     v: 0,
-    //     r: ethers.constants.HashZero,
-    //     s: ethers.constants.HashZero,
-    //   };
-    //   const swaps = [{ in: testTokenList[0].index, out: testTokenList[1].index, amount: 1e18 }];
-    //   itThrowsErrorForInvalidRwaSwapsArgs(testTokenList, { swaps, authorization: emptyAuthorization }, 'INVALID_TOKEN');
-    // });
+    context('if none of tokens are RWA tokens', () => {
+      const testTokenList = [
+        { symbol: 'DAI', index: 0 },
+        { symbol: 'MKR', index: 1 },
+      ];
+      const emptyAuthorization = {
+        operator: ethers.constants.AddressZero,
+        v: 0,
+        r: ethers.constants.HashZero,
+        s: ethers.constants.HashZero,
+      };
+      const swaps = [{ in: testTokenList[0].index, out: testTokenList[1].index, amount: 1e18 }];
+      itThrowsErrorForInvalidRwaSwapsArgs(testTokenList, { swaps, authorization: emptyAuthorization }, 'INVALID_TOKEN');
+    });
 
     context('one of tokens is RWA tokens', () => {
       const testTokenList = [
@@ -176,21 +183,21 @@ describe('RwaSwaps', () => {
         s: ethers.constants.HashZero,
       };
       const swaps = [{ in: testTokenList[0].index, out: testTokenList[1].index, amount: 1e18 }];
-      // context('operator is not authorized', () => {
-      //   itThrowsErrorForInvalidRwaSwapsArgs(
-      //     testTokenList,
-      //     {
-      //       swaps,
-      //       authorization: {
-      //         operator: '0xbA54cAA3ac52C416AfB461A07aec1744C08462e5',
-      //         v: 0,
-      //         r: ethers.constants.HashZero,
-      //         s: ethers.constants.HashZero,
-      //       },
-      //     },
-      //     'SENDER_NOT_ALLOWED'
-      //   );
-      // });
+      context('operator is not authorized', () => {
+        itThrowsErrorForInvalidRwaSwapsArgs(
+          testTokenList,
+          {
+            swaps,
+            authorization: {
+              operator: '0xbA54cAA3ac52C416AfB461A07aec1744C08462e5',
+              v: 0,
+              r: ethers.constants.HashZero,
+              s: ethers.constants.HashZero,
+            },
+          },
+          'SENDER_NOT_ALLOWED'
+        );
+      });
       context('when rwa operator is set', () => {
         const operatorAddress = '0xbA54cAA3ac52C416AfB461A07aec1744C08462e5';
         sharedBeforeEach('set rwa operator', async () => {
@@ -223,7 +230,8 @@ describe('RwaSwaps', () => {
             await authorizer.connect(admin).grantPermission(operatorRole, operatorAddress, ANY_ADDRESS);
             const _SWAP_TYPE_HASH = '0xe192dcbc143b1e244ad73b813fd3c097b832ad260a157340b4e5e5beda067abe';
             const to = funds.recipient;
-            const nonce = await vault.connect(lp).getNextNonceByOperator(operatorAddress, to);
+            // const nonce = await vault.connect(lp).getNextNonceByOperator(operatorAddress, to);
+            const nonce = await rwaRegistry.connect(lp).getNextNonceByOperator(operatorAddress, to);
             const deadline = MAX_INT256;
 
             const structHash = ethers.utils.keccak256(
@@ -253,6 +261,7 @@ describe('RwaSwaps', () => {
 
             // Output the components
           });
+
           it('should pass _verifyRwaSwapSignature', async () => {
             mainPoolId = await deployPool(
               PoolSpecialization.GeneralPool,
@@ -270,17 +279,16 @@ describe('RwaSwaps', () => {
             // const swap = toSingleSwap(SwapKind.GivenOut, input);
             const swap = toBatchSwap(input);
             // const call = vault.connect(sender).rwaSwap(swap, funds, MAX_INT256, MAX_INT256, authorization);
-            const call = vault
-              .connect(sender)
-              .rwaBatchSwap(
-                SwapKind.GivenIn,
-                swap,
-                tokens.addresses,
-                funds,
-                Array(tokens.length).fill(MAX_INT256),
-                MAX_INT256,
-                authorization
-              );
+            const call = vault.connect(sender).rwaBatchSwap(
+              SwapKind.GivenIn,
+              swap,
+              // testTokenList.map((v) => v.index).map((v, i) => tokens.addresses[i]),
+              tokens.addresses,
+              funds,
+              Array(tokens.length).fill(MAX_INT256),
+              MAX_INT256,
+              authorization
+            );
 
             await expect(call).to.not.be.reverted;
           });
@@ -516,7 +524,8 @@ describe('RwaSwaps', () => {
           const call = vault.connect(sender).rwaBatchSwap(
             SwapKind.GivenIn,
             swap,
-            testTokenList.map((v) => v.index).map((v, i) => tokens.addresses[i]),
+            // testTokenList.map((v) => v.index).map((v, i) => tokens.addresses[i]),
+            tokens.addresses,
             funds,
             limits,
             deadline,
@@ -548,11 +557,10 @@ describe('RwaSwaps', () => {
           PoolSpecialization.GeneralPool,
           testTokenList.map((v) => v.symbol)
         );
-        console.log(testTokenList);
         assertRwaSwapGivenInReverts(input, reason);
       });
 
-      /*       context('with a minimal swap info pool', () => {
+      context('with a minimal swap info pool', () => {
         deployMainPool(
           PoolSpecialization.MinimalSwapInfoPool,
           testTokenList.map((v) => v.symbol)
@@ -566,7 +574,7 @@ describe('RwaSwaps', () => {
           testTokenList.map((v) => v.symbol)
         );
         assertRwaSwapGivenInReverts(input, reason);
-      }); */
+      });
     });
   }
 });
