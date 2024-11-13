@@ -10,6 +10,8 @@ import "@balancer-labs/v2-interfaces/contracts/solidity-utils/helpers/BalancerEr
  */
 library Math {
     // solhint-disable no-inline-assembly
+    uint256 internal constant ONE = 1e18; // 18 decimal places
+
 
     /**
      * @dev Returns the absolute value of a signed integer.
@@ -106,6 +108,22 @@ library Math {
         // result = a == 0 ? 0 : 1 + (a - 1) / b;
         assembly {
             result := mul(iszero(iszero(a)), add(1, div(sub(a, 1), b)))
+        }
+    }
+    function mulUp(uint256 a, uint256 b) internal pure returns (uint256 result) {
+        uint256 product = a * b;
+        _require(a == 0 || product / a == b, Errors.MUL_OVERFLOW);
+
+        // The traditional divUp formula is:
+        // divUp(x, y) := (x + y - 1) / y
+        // To avoid intermediate overflow in the addition, we distribute the division and get:
+        // divUp(x, y) := (x - 1) / y + 1
+        // Note that this requires x != 0, if x == 0 then the result is zero
+        //
+        // Equivalent to:
+        // result = product == 0 ? 0 : ((product - 1) / FixedPoint.ONE) + 1;
+        assembly {
+            result := mul(iszero(iszero(product)), add(div(sub(product, 1), ONE), 1))
         }
     }
 }

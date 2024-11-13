@@ -58,8 +58,6 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
     using SafeCast for uint256;
     using BalanceAllocation for bytes32;
 
-    mapping(bytes32 => mapping(address => uint256)) private indexRatio;
-
     function _batchSwap(
         SwapKind kind,
         BatchSwapStep[] memory swaps,
@@ -287,7 +285,7 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
         (amountIn, amountOut) = _getAmounts(request.kind, request.amount, amountCalculated);
 
         // re-calculate swap fee
-        uint256 _swapFee = amountIn.mul(IProtocolFeesCollector(pool).getSwapFeePercentage());
+        uint256 _swapFee = amountIn.mulUp(IProtocolFeesCollector(pool).getSwapFeePercentage());
 
         //update index ratio
         _updates(request.poolId, address(request.tokenIn), _swapFee);
@@ -382,7 +380,7 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
         (uint256 amountIn, uint256 amountOut) = _getAmounts(request.kind, request.amount, amountCalculated);
 
         // substract swap fee from tokenInBalance
-        uint256 _swapFee = amountIn.mul(IProtocolFeesCollector(address(pool)).getSwapFeePercentage());
+        uint256 _swapFee = amountIn.mulUp(IProtocolFeesCollector(address(pool)).getSwapFeePercentage());
         //transfer _swapFee to PoolFee
         uint256 afterSwapFee = amountIn.sub(_swapFee);
 
@@ -438,7 +436,7 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
         (uint256 amountIn, uint256 amountOut) = _getAmounts(request.kind, request.amount, amountCalculated);
 
         // substract swap fee from tokenInBalance
-        uint256 _swapFee = amountIn.mul(IProtocolFeesCollector(address(pool)).getSwapFeePercentage());
+        uint256 _swapFee = amountIn.mulUp(IProtocolFeesCollector(address(pool)).getSwapFeePercentage());
         //transfer _swapFee to PoolFee
         uint256 afterSwapFee = amountIn.sub(_swapFee);
 
@@ -543,29 +541,6 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
                 revert(start, add(size, 36))
             }
         }
-    }
-
-    /**
-     * @dev update index ratio after each swap
-     * @param _poolId pool id
-     * @param _token tokenIn address
-     * @param _feeAount swapping fee
-     */
-    function _updates(
-        bytes32 _poolId,
-        address _token,
-        uint256 _feeAount
-    ) internal {
-        // Only update on this pool if there is a fee
-        if (_feeAount == 0) return;
-        address _poolAddr;
-        (_poolAddr, ) = IVault(this).getPool(_poolId);
-        IERC20(_token).safeTransfer(address(IVault(this).getPoolFeeCollector()), _feeAount); // transfer the fees out to PoolFees
-        uint256 _ratio = (_feeAount * 1e18) / IERC20(_poolAddr).totalSupply(); // 1e18 adjustment is removed during claim
-        if (_ratio > 0) {
-            indexRatio[_poolId][_token] += _ratio;
-        }
-        // emit Fees(msg.sender, amount, 0);
     }
 
     function getIndexRatio(bytes32 _poolId, address _token) external view override returns (uint256) {
