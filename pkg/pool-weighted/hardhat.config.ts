@@ -41,6 +41,17 @@ export default {
       chainId: 1337,
       allowUnlimitedContractSize: true,
     },
+    sepolia: {
+      url: 'https://1rpc.io/sepolia',
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY as string],
+      gasPrice: 1000000000,
+      verify: {
+        etherscan: {
+          apiUrl: 'https://api-sepolia.basescan.org/api',
+          apiKey: 'CHZ6N22Q1Z3SDT62HYKMB7UMDR3M1HRCHG',
+        },
+      },
+    },
     // for testnet
     baseSepolia: {
       url: 'https://sepolia.base.org',
@@ -65,18 +76,25 @@ export default {
     // },
   },
   etherscan: {
-    apiKey: 'CHZ6N22Q1Z3SDT62HYKMB7UMDR3M1HRCHG',
+    apiKey: {
+      baseSepolia: 'CHZ6N22Q1Z3SDT62HYKMB7UMDR3M1HRCHG',
+    },
+    customChains: [
+      {
+        network: 'baseSepolia',
+        chainId: 84532,
+        urls: {
+          apiURL: 'https://api-sepolia.basescan.org/api',
+          browserURL: 'https://sepolia.basescan.org',
+        },
+      },
+    ],
   },
   sourcify: {
     enabled: true,
   },
   solidity: {
     compilers: hardhatBaseConfig.compilers,
-    overrides: { ...hardhatBaseConfig.overrides(name) },
-    optimizer: {
-      enabled: true,
-      runs: 9000,
-    },
   },
   warnings: hardhatBaseConfig.warnings,
 };
