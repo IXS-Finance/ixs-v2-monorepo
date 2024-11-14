@@ -25,6 +25,7 @@ import "./IAuthorizer.sol";
 import "./IFlashLoanRecipient.sol";
 import "./IProtocolFeesCollector.sol";
 import "./RwaDataTypes.sol";
+import "./IPoolFees.sol";
 
 pragma solidity >=0.7.0 <0.9.0;
 
@@ -788,4 +789,16 @@ interface IVault is ISignaturesValidator, ITemporarilyPausable, IAuthentication 
      */
     function WETH() external view returns (IWETH);
     // solhint-disable-previous-line func-name-mixedcase
+
+    /**
+     * @dev Return address of Pool Fee collector contract
+     */
+    function getPoolFeeCollector() external view returns (IPoolFees);
+
+    /**
+     * @dev Return index ratio
+     */
+    function getIndexRatio(bytes32 _poolId, address _token) external view returns (uint256);
+
+
 }

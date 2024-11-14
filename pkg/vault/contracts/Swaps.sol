@@ -282,6 +282,11 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
         }
 
         (amountIn, amountOut) = _getAmounts(request.kind, request.amount, amountCalculated);
+        // re-calculate swap fee
+        uint256 _swapFee = amountIn.mulUp(IProtocolFeesCollector(pool).getSwapFeePercentage());
+
+        //update index ratio
+        _updates(request.poolId, address(request.tokenIn), _swapFee);
         emit Swap(request.poolId, request.tokenIn, request.tokenOut, amountIn, amountOut);
     }
 
@@ -371,7 +376,11 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
         amountCalculated = pool.onSwap(request, tokenInTotal, tokenOutTotal);
         (uint256 amountIn, uint256 amountOut) = _getAmounts(request.kind, request.amount, amountCalculated);
 
-        newTokenInBalance = tokenInBalance.increaseCash(amountIn);
+        uint256 _swapFee = amountIn.mulUp(IProtocolFeesCollector(address(pool)).getSwapFeePercentage());
+        //transfer _swapFee to PoolFee
+        uint256 afterSwapFee = amountIn.sub(_swapFee);
+
+        newTokenInBalance = tokenInBalance.increaseCash(afterSwapFee);
         newTokenOutBalance = tokenOutBalance.decreaseCash(amountOut);
     }
 
@@ -421,7 +430,12 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
         // Perform the swap request callback and compute the new balances for 'token in' and 'token out' after the swap
         amountCalculated = pool.onSwap(request, currentBalances, indexIn, indexOut);
         (uint256 amountIn, uint256 amountOut) = _getAmounts(request.kind, request.amount, amountCalculated);
-        tokenInBalance = tokenInBalance.increaseCash(amountIn);
+
+        uint256 _swapFee = amountIn.mulUp(IProtocolFeesCollector(address(pool)).getSwapFeePercentage());
+        //transfer _swapFee to PoolFee
+        uint256 afterSwapFee = amountIn.sub(_swapFee);
+
+        tokenInBalance = tokenInBalance.increaseCash(afterSwapFee);
         tokenOutBalance = tokenOutBalance.decreaseCash(amountOut);
 
         // Because no tokens were registered or deregistered between now or when we retrieved the indexes for
@@ -522,5 +536,9 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
                 revert(start, add(size, 36))
             }
         }
+    }
+
+    function getIndexRatio(bytes32 _poolId, address _token) external view override returns (uint256) {
+        return indexRatio[_poolId][_token];
     }
 }
