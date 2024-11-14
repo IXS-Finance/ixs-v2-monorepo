@@ -14,17 +14,6 @@
 
 pragma experimental ABIEncoderV2;
 
-import "../solidity-utils/openzeppelin/IERC20.sol";
-import "../solidity-utils/helpers/IAuthentication.sol";
-import "../solidity-utils/helpers/ISignaturesValidator.sol";
-import "../solidity-utils/helpers/ITemporarilyPausable.sol";
-import "../solidity-utils/misc/IWETH.sol";
-
-import "./IAsset.sol";
-import "./IAuthorizer.sol";
-import "./IFlashLoanRecipient.sol";
-import "./IProtocolFeesCollector.sol";
-
 pragma solidity >=0.7.0 <0.9.0;
 
 /**
