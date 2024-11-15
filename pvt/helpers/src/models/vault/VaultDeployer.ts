@@ -25,7 +25,7 @@ export default {
     // This sequence breaks the circular dependency between authorizer, vault, adaptor and entrypoint.
     // First we deploy the vault, adaptor and entrypoint with a basic authorizer.
     const basicAuthorizer = await this._deployBasicAuthorizer(admin);
-    const rwaRegistry = await RwaRegistry.create({ from });
+    const rwaRegistry = await RwaRegistry.create({ from, authorizer: basicAuthorizer.address });
     const vault = await (mocked ? this._deployMocked : this._deployReal)(
       deployment,
       basicAuthorizer,
@@ -44,8 +44,11 @@ export default {
       // Then, with the entrypoint correctly deployed, we create the actual authorizer to be used and set it in the vault.
       authorizer = await this._deployAuthorizer(admin, adaptorEntrypoint, nextAdmin, from);
       const setAuthorizerActionId = await actionId(vault, 'setAuthorizer');
+      const setAuthorizerActionIdForRwaRegistry = await actionId(rwaRegistry.instance, 'setAuthorizer');
       await basicAuthorizer.grantRolesToMany([setAuthorizerActionId], [admin.address]);
+      await basicAuthorizer.grantRolesToMany([setAuthorizerActionIdForRwaRegistry], [admin.address]);
       await vault.connect(admin).setAuthorizer(authorizer.address);
+      await rwaRegistry.instance.connect(admin).setAuthorizer(authorizer.address);
     } else {
       authorizer = basicAuthorizer;
     }

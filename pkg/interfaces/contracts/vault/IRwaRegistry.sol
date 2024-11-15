@@ -21,6 +21,10 @@ import "@balancer-labs/v2-interfaces/contracts/vault/RwaDataTypes.sol";
 
 interface IRwaRegistry {
     event ApprovedRwaSwap(address indexed operator, address indexed spender, uint256 indexed nonce, uint256 deadline);
+    event AddedToken(address tokenAddress, address operator);
+    event RemovedToken(address tokenAddress, address operator);
+
+    function setAuthorizer(IAuthorizer newAuthorizer) external;
 
     /**
      * @dev Returns the next nonce used by an operator to issue the signature for the user.
@@ -44,7 +48,6 @@ interface IRwaRegistry {
         address to,
         RwaDataTypes.RwaAuthorizationData calldata authorization,
         uint256 deadline,
-        IAuthorizer authorizer,
         bytes32 domainSeparatorV4
     ) external;
 

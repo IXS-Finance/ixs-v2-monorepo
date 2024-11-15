@@ -2,6 +2,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 
 export type RwaRegistryDeployment = {
   from?: SignerWithAddress;
+  authorizer: string;
 };
 
 export type RwaAuthorizationData = {

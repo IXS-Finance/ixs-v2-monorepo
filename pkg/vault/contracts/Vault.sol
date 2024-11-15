@@ -119,13 +119,7 @@ contract Vault is VaultAuthorization, Swaps {
         returns (int256[] memory assetDeltas)
     {
         _require(rwaRegistry.isRwaBatchSwap(swaps, assets), Errors.INVALID_TOKEN);
-        rwaRegistry.verifyRwaSwapSignature(
-            funds.recipient,
-            authorization,
-            deadline,
-            getAuthorizer(),
-            _domainSeparatorV4()
-        );
+        rwaRegistry.verifyRwaSwapSignature(funds.recipient, authorization, deadline, _domainSeparatorV4());
         return _batchSwap(kind, swaps, assets, funds, limits, deadline);
     }
 
