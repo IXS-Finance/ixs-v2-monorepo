@@ -1280,207 +1280,207 @@ describe('Swaps', () => {
         });
       });
 
-      // context('for a multi swap', () => {
-      //   context('without hops', () => {
-      //     context('with the same pool', () => {
-      //       const swaps = [
-      //         // Get 1 DAI by sending 0.5 MKR
-      //         { in: 1, out: 0, amount: 1e18 },
-      //         // Get 2 MKR by sending 1 DAI
-      //         { in: 0, out: 1, amount: 2e18 },
-      //       ];
+      context('for a multi swap', () => {
+        context('without hops', () => {
+          context('with the same pool', () => {
+            const swaps = [
+              // Get 1 DAI by sending 0.5 MKR
+              { in: 1, out: 0, amount: 1e18 },
+              // Get 2 MKR by sending 1 DAI
+              { in: 0, out: 1, amount: 2e18 },
+            ];
 
-      //       assertSwapGivenOut({ swaps }, { MKR: 1.5e18 });
-      //     });
+            assertSwapGivenOut({ swaps }, { MKR: 1.5e18 });
+          });
 
-      //     context('with another pool', () => {
-      //       context('with two tokens', () => {
-      //         const anotherPoolSymbols = ['DAI', 'MKR'];
+          context('with another pool', () => {
+            context('with two tokens', () => {
+              const anotherPoolSymbols = ['DAI', 'MKR'];
 
-      //         const itHandleMultiSwapsWithoutHopsProperly = (anotherPoolSpecialization: PoolSpecialization) => {
-      //           deployAnotherPool(anotherPoolSpecialization, anotherPoolSymbols);
+              const itHandleMultiSwapsWithoutHopsProperly = (anotherPoolSpecialization: PoolSpecialization) => {
+                deployAnotherPool(anotherPoolSpecialization, anotherPoolSymbols);
 
-      //           context('for a single pair', () => {
-      //             // In each pool, get 1e18 DAI by sending 0.5e18 MKR
-      //             const swaps = [
-      //               { pool: 0, in: 1, out: 0, amount: 1e18 },
-      //               { pool: 1, in: 1, out: 0, amount: 1e18 },
-      //             ];
+                context('for a single pair', () => {
+                  // In each pool, get 1e18 DAI by sending 0.5e18 MKR
+                  const swaps = [
+                    { pool: 0, in: 1, out: 0, amount: 1e18 },
+                    { pool: 1, in: 1, out: 0, amount: 1e18 },
+                  ];
 
-      //             assertSwapGivenOut({ swaps }, { DAI: 2e18, MKR: -1e18 });
-      //           });
+                  assertSwapGivenOut({ swaps }, { DAI: 2e18, MKR: -1e18 });
+                });
 
-      //           context('for a multi pair', () => {
-      //             context('when pools offer same price', () => {
-      //               const swaps = [
-      //                 // Get 1 DAI by sending 0.5 MKR
-      //                 { pool: 0, in: 1, out: 0, amount: 1e18 },
-      //                 // Get 2 MKR by sending 1 DAI
-      //                 { pool: 1, in: 0, out: 1, amount: 2e18 },
-      //               ];
+                context('for a multi pair', () => {
+                  context('when pools offer same price', () => {
+                    const swaps = [
+                      // Get 1 DAI by sending 0.5 MKR
+                      { pool: 0, in: 1, out: 0, amount: 1e18 },
+                      // Get 2 MKR by sending 1 DAI
+                      { pool: 1, in: 0, out: 1, amount: 2e18 },
+                    ];
 
-      //               assertSwapGivenOut({ swaps }, { MKR: 1.5e18 });
-      //             });
+                    assertSwapGivenOut({ swaps }, { MKR: 1.5e18 });
+                  });
 
-      //             context('when pools do not offer same price', () => {
-      //               beforeEach('tweak the main pool to give back as much as it receives', async () => {
-      //                 const [poolAddress] = (await vault.getPool(mainPoolId)) as [string, unknown];
-      //                 const pool = await deployedAt('MockPool', poolAddress);
-      //                 await pool.setMultiplier(fp(1));
-      //               });
+                  context('when pools do not offer same price', () => {
+                    beforeEach('tweak the main pool to give back as much as it receives', async () => {
+                      const [poolAddress] = (await vault.getPool(mainPoolId)) as [string, unknown];
+                      const pool = await deployedAt('MockPool', poolAddress);
+                      await pool.setMultiplier(fp(1));
+                    });
 
-      //               beforeEach('tweak sender and recipient to be other address', async () => {
-      //                 // The caller will receive profit in MKR, since it sold DAI for more MKR than it bought it for.
-      //                 // The caller receives tokens and doesn't send any.
-      //                 // Note the caller didn't even have any tokens to begin with.
-      //                 funds.sender = other.address;
-      //                 funds.recipient = other.address;
-      //               });
+                    beforeEach('tweak sender and recipient to be other address', async () => {
+                      // The caller will receive profit in MKR, since it sold DAI for more MKR than it bought it for.
+                      // The caller receives tokens and doesn't send any.
+                      // Note the caller didn't even have any tokens to begin with.
+                      funds.sender = other.address;
+                      funds.recipient = other.address;
+                    });
 
-      //               // Sell DAI in the pool where it is valuable, buy it in the one where it has a regular price
-      //               const swaps = [
-      //                 // Sell 1 DAI for 2 MKR
-      //                 { pool: 1, in: 0, out: 1, amount: 2e18 },
-      //                 // Buy 1 DAI with 1 MKR
-      //                 { pool: 0, in: 1, out: 0, amount: 1e18 },
-      //               ];
+                    // Sell DAI in the pool where it is valuable, buy it in the one where it has a regular price
+                    const swaps = [
+                      // Sell 1 DAI for 2 MKR
+                      { pool: 1, in: 0, out: 1, amount: 2e18 },
+                      // Buy 1 DAI with 1 MKR
+                      { pool: 0, in: 1, out: 0, amount: 1e18 },
+                    ];
 
-      //               assertSwapGivenOut({ swaps, fromOther: true, toOther: true }, { MKR: 1e18 });
-      //             });
-      //           });
-      //         };
+                    assertSwapGivenOut({ swaps, fromOther: true, toOther: true }, { MKR: 1e18 });
+                  });
+                });
+              };
 
-      //         context('with a general pool', () => {
-      //           itHandleMultiSwapsWithoutHopsProperly(PoolSpecialization.GeneralPool);
-      //         });
+              context('with a general pool', () => {
+                itHandleMultiSwapsWithoutHopsProperly(PoolSpecialization.GeneralPool);
+              });
 
-      //         context('with a minimal swap info pool', () => {
-      //           itHandleMultiSwapsWithoutHopsProperly(PoolSpecialization.MinimalSwapInfoPool);
-      //         });
-      //         context('with a two token pool', () => {
-      //           itHandleMultiSwapsWithoutHopsProperly(PoolSpecialization.TwoTokenPool);
-      //         });
-      //       });
+              context('with a minimal swap info pool', () => {
+                itHandleMultiSwapsWithoutHopsProperly(PoolSpecialization.MinimalSwapInfoPool);
+              });
+              context('with a two token pool', () => {
+                itHandleMultiSwapsWithoutHopsProperly(PoolSpecialization.TwoTokenPool);
+              });
+            });
 
-      //       context('with three tokens', () => {
-      //         const anotherPoolSymbols = ['DAI', 'MKR', 'SNX'];
+            context('with three tokens', () => {
+              const anotherPoolSymbols = ['DAI', 'MKR', 'SNX'];
 
-      //         const itHandleMultiSwapsWithoutHopsProperly = (anotherPoolSpecialization: PoolSpecialization) => {
-      //           deployAnotherPool(anotherPoolSpecialization, anotherPoolSymbols);
+              const itHandleMultiSwapsWithoutHopsProperly = (anotherPoolSpecialization: PoolSpecialization) => {
+                deployAnotherPool(anotherPoolSpecialization, anotherPoolSymbols);
 
-      //           context('for a single pair', () => {
-      //             // In each pool, get 1e18 DAI by sending 0.5e18 MKR
-      //             const swaps = [
-      //               { pool: 0, in: 1, out: 0, amount: 1e18 },
-      //               { pool: 1, in: 1, out: 0, amount: 1e18 },
-      //             ];
+                context('for a single pair', () => {
+                  // In each pool, get 1e18 DAI by sending 0.5e18 MKR
+                  const swaps = [
+                    { pool: 0, in: 1, out: 0, amount: 1e18 },
+                    { pool: 1, in: 1, out: 0, amount: 1e18 },
+                  ];
 
-      //             assertSwapGivenOut({ swaps }, { DAI: 2e18, MKR: -1e18 });
-      //           });
+                  assertSwapGivenOut({ swaps }, { DAI: 2e18, MKR: -1e18 });
+                });
 
-      //           context('for a multi pair', () => {
-      //             const swaps = [
-      //               // Get 1 DAI by sending 0.5 MKR
-      //               { pool: 0, in: 1, out: 0, amount: 1e18 },
-      //               // Get 1 SNX by sending 0.5 MKR
-      //               { pool: 1, in: 1, out: 2, amount: 1e18 },
-      //             ];
+                context('for a multi pair', () => {
+                  const swaps = [
+                    // Get 1 DAI by sending 0.5 MKR
+                    { pool: 0, in: 1, out: 0, amount: 1e18 },
+                    // Get 1 SNX by sending 0.5 MKR
+                    { pool: 1, in: 1, out: 2, amount: 1e18 },
+                  ];
 
-      //             assertSwapGivenOut({ swaps }, { DAI: 1e18, SNX: 1e18, MKR: -1e18 });
-      //           });
-      //         };
+                  assertSwapGivenOut({ swaps }, { DAI: 1e18, SNX: 1e18, MKR: -1e18 });
+                });
+              };
 
-      //         context('with a general pool', () => {
-      //           itHandleMultiSwapsWithoutHopsProperly(PoolSpecialization.GeneralPool);
-      //         });
+              context('with a general pool', () => {
+                itHandleMultiSwapsWithoutHopsProperly(PoolSpecialization.GeneralPool);
+              });
 
-      //         context('with a minimal swap info pool', () => {
-      //           itHandleMultiSwapsWithoutHopsProperly(PoolSpecialization.MinimalSwapInfoPool);
-      //         });
-      //       });
-      //     });
-      //   });
+              context('with a minimal swap info pool', () => {
+                itHandleMultiSwapsWithoutHopsProperly(PoolSpecialization.MinimalSwapInfoPool);
+              });
+            });
+          });
+        });
 
-      //   context('with hops', () => {
-      //     context('with the same pool', () => {
-      //       context('when token in and out match', () => {
-      //         const swaps = [
-      //           // Get 1 MKR by sending 0.5 DAI
-      //           { in: 0, out: 1, amount: 1e18 },
-      //           // Get the previously required amount of 0.5 DAI by sending 0.25 MKR
-      //           { in: 1, out: 0, amount: 0 },
-      //         ];
+        context('with hops', () => {
+          context('with the same pool', () => {
+            context('when token in and out match', () => {
+              const swaps = [
+                // Get 1 MKR by sending 0.5 DAI
+                { in: 0, out: 1, amount: 1e18 },
+                // Get the previously required amount of 0.5 DAI by sending 0.25 MKR
+                { in: 1, out: 0, amount: 0 },
+              ];
 
-      //         assertSwapGivenOut({ swaps }, { MKR: 0.75e18 });
-      //       });
+              assertSwapGivenOut({ swaps }, { MKR: 0.75e18 });
+            });
 
-      //       context('when token in and out mismatch', () => {
-      //         const swaps = [
-      //           { in: 1, out: 0, amount: 1e18 },
-      //           { in: 1, out: 0, amount: 0 },
-      //         ];
+            context('when token in and out mismatch', () => {
+              const swaps = [
+                { in: 1, out: 0, amount: 1e18 },
+                { in: 1, out: 0, amount: 0 },
+              ];
 
-      //         assertSwapGivenOutReverts({ swaps }, 'MALCONSTRUCTED_MULTIHOP_SWAP');
-      //       });
-      //     });
+              assertSwapGivenOutReverts({ swaps }, 'MALCONSTRUCTED_MULTIHOP_SWAP');
+            });
+          });
 
-      //     context('with another pool', () => {
-      //       context('with two tokens', () => {
-      //         const anotherPoolSymbols = ['DAI', 'MKR'];
+          context('with another pool', () => {
+            context('with two tokens', () => {
+              const anotherPoolSymbols = ['DAI', 'MKR'];
 
-      //         const itHandleMultiSwapsWithHopsProperly = (anotherPoolSpecialization: PoolSpecialization) => {
-      //           deployAnotherPool(anotherPoolSpecialization, anotherPoolSymbols);
+              const itHandleMultiSwapsWithHopsProperly = (anotherPoolSpecialization: PoolSpecialization) => {
+                deployAnotherPool(anotherPoolSpecialization, anotherPoolSymbols);
 
-      //           const swaps = [
-      //             // Get 1 MKR by sending 0.5 DAI
-      //             { pool: 0, in: 0, out: 1, amount: 1e18 },
-      //             // Get the previously required amount of 0.5 DAI by sending 0.25 MKR
-      //             { pool: 1, in: 1, out: 0, amount: 0 },
-      //           ];
+                const swaps = [
+                  // Get 1 MKR by sending 0.5 DAI
+                  { pool: 0, in: 0, out: 1, amount: 1e18 },
+                  // Get the previously required amount of 0.5 DAI by sending 0.25 MKR
+                  { pool: 1, in: 1, out: 0, amount: 0 },
+                ];
 
-      //           assertSwapGivenOut({ swaps }, { MKR: 0.75e18 });
-      //         };
+                assertSwapGivenOut({ swaps }, { MKR: 0.75e18 });
+              };
 
-      //         context('with a general pool', () => {
-      //           itHandleMultiSwapsWithHopsProperly(PoolSpecialization.GeneralPool);
-      //         });
+              context('with a general pool', () => {
+                itHandleMultiSwapsWithHopsProperly(PoolSpecialization.GeneralPool);
+              });
 
-      //         context('with a minimal swap info pool', () => {
-      //           itHandleMultiSwapsWithHopsProperly(PoolSpecialization.MinimalSwapInfoPool);
-      //         });
+              context('with a minimal swap info pool', () => {
+                itHandleMultiSwapsWithHopsProperly(PoolSpecialization.MinimalSwapInfoPool);
+              });
 
-      //         context('with a two token pool', () => {
-      //           itHandleMultiSwapsWithHopsProperly(PoolSpecialization.TwoTokenPool);
-      //         });
-      //       });
+              context('with a two token pool', () => {
+                itHandleMultiSwapsWithHopsProperly(PoolSpecialization.TwoTokenPool);
+              });
+            });
 
-      //       context('with three tokens', () => {
-      //         const anotherPoolSymbols = ['DAI', 'MKR', 'SNX'];
+            context('with three tokens', () => {
+              const anotherPoolSymbols = ['DAI', 'MKR', 'SNX'];
 
-      //         const itHandleMultiSwapsWithHopsProperly = (anotherPoolSpecialization: PoolSpecialization) => {
-      //           deployAnotherPool(anotherPoolSpecialization, anotherPoolSymbols);
+              const itHandleMultiSwapsWithHopsProperly = (anotherPoolSpecialization: PoolSpecialization) => {
+                deployAnotherPool(anotherPoolSpecialization, anotherPoolSymbols);
 
-      //           const swaps = [
-      //             // Get 1 MKR by sending 0.5 DAI
-      //             { pool: 0, in: 0, out: 1, amount: 1e18 },
-      //             // Get the previously required amount of 0.5 DAI by sending 0.25 SNX
-      //             { pool: 1, in: 2, out: 0, amount: 0 },
-      //           ];
+                const swaps = [
+                  // Get 1 MKR by sending 0.5 DAI
+                  { pool: 0, in: 0, out: 1, amount: 1e18 },
+                  // Get the previously required amount of 0.5 DAI by sending 0.25 SNX
+                  { pool: 1, in: 2, out: 0, amount: 0 },
+                ];
 
-      //           assertSwapGivenOut({ swaps }, { MKR: 1e18, SNX: -0.25e18 });
-      //         };
+                assertSwapGivenOut({ swaps }, { MKR: 1e18, SNX: -0.25e18 });
+              };
 
-      //         context('with a general pool', () => {
-      //           itHandleMultiSwapsWithHopsProperly(PoolSpecialization.GeneralPool);
-      //         });
+              context('with a general pool', () => {
+                itHandleMultiSwapsWithHopsProperly(PoolSpecialization.GeneralPool);
+              });
 
-      //         context('with a minimal swap info pool', () => {
-      //           itHandleMultiSwapsWithHopsProperly(PoolSpecialization.MinimalSwapInfoPool);
-      //         });
-      //       });
-      //     });
-      //   });
-      // });
+              context('with a minimal swap info pool', () => {
+                itHandleMultiSwapsWithHopsProperly(PoolSpecialization.MinimalSwapInfoPool);
+              });
+            });
+          });
+        });
+      });
     });
   }
 });
