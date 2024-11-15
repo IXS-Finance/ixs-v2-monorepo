@@ -327,19 +327,19 @@ abstract contract PoolBalances is Fees, ReentrancyGuard, PoolTokens, UserBalance
      * @dev update index ratio after each swap
      * @param _poolId pool id
      * @param _token tokenIn address
-     * @param _feeAount swapping fee
+     * @param _feeAmount swapping fee
      */
     function _updates(
         bytes32 _poolId,
         address _token,
-        uint256 _feeAount
+        uint256 _feeAmount
     ) internal {
         // Only update on this pool if there is a fee
-        if (_feeAount == 0) return;
+        if (_feeAmount == 0) return;
         address _poolAddr;
         (_poolAddr, ) = IVault(this).getPool(_poolId);
-        IERC20(_token).safeTransfer(address(IVault(this).getPoolFeeCollector()), _feeAount); // transfer the fees out to PoolFees
-        uint256 _ratio = (_feeAount * 1e18) / IERC20(_poolAddr).totalSupply(); // 1e18 adjustment is removed during claim
+        IERC20(_token).safeTransfer(address(IVault(this).getPoolFeeCollector()), _feeAmount); // transfer the fees out to PoolFees
+        uint256 _ratio = (_feeAmount * 1e18) / IERC20(_poolAddr).totalSupply(); // 1e18 adjustment is removed during claim
         if (_ratio > 0) {
             indexRatio[_poolId][_token] += _ratio;
         }
