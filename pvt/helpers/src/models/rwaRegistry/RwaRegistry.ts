@@ -16,7 +16,7 @@ export default class RwaRegistry {
    * @param deployment - Deployment parameters.
    * @returns A Promise that resolves to an instance of RwaRegistry.
    */
-  static async create(deployment: RwaRegistryDeployment = {}): Promise<RwaRegistry> {
+  static async create(deployment: RwaRegistryDeployment): Promise<RwaRegistry> {
     return RwaRegistryDeployer.deploy(deployment);
   }
 
@@ -109,13 +109,12 @@ export default class RwaRegistry {
     to: string,
     authorization: RwaAuthorizationData,
     deadline: BigNumberish,
-    authorizer: string,
     domainSeparatorV4: string,
     txParams: TxParams = {}
   ): Promise<ContractTransaction> {
     const from = txParams.from;
     const instance = from ? this.instance.connect(from) : this.instance;
-    return instance.verifyRwaSwapSignature(to, authorization, deadline, authorizer, domainSeparatorV4);
+    return instance.verifyRwaSwapSignature(to, authorization, deadline, domainSeparatorV4);
   }
 
   /**

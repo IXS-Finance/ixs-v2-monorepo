@@ -104,6 +104,10 @@ describe('RwaSwaps', () => {
     await tokens.mint({ to: [lp, trader, trader2], amount: bn(200e18) });
     await tokens.approve({ to: vault, from: [lp, trader, trader2], amount: MAX_UINT112 });
 
+    await authorizer
+      .connect(admin)
+      .grantPermission(ethers.utils.keccak256(ethers.utils.toUtf8Bytes('OPERATOR_ROLE')), admin.address, ANY_ADDRESS);
+
     await rwaRegistry.connect(admin).addToken(tokens.addresses[2]);
     await rwaRegistry.connect(admin).addToken(tokens.addresses[3]);
   });
@@ -368,6 +372,45 @@ describe('RwaSwaps', () => {
           });
         });
       });
+    });
+  });
+
+  context('Test RwaRegistry authorization', () => {
+    sharedBeforeEach('revoke the OPERATOR_ROLE', async () => {
+      await authorizer
+        .connect(admin)
+        .revokePermission(
+          ethers.utils.keccak256(ethers.utils.toUtf8Bytes('OPERATOR_ROLE')),
+          admin.address,
+          ANY_ADDRESS
+        );
+    });
+    it('should throw an error when calling removeToken without authorization', async () => {
+      const call = rwaRegistry.connect(admin).removeToken(tokens.addresses[2]);
+
+      await expect(call).revertedWith('SENDER_NOT_ALLOWED');
+    });
+    it('should throw an error when calling addToken without authorization', async () => {
+      const call = rwaRegistry.connect(admin).addToken(tokens.addresses[2]);
+
+      await expect(call).revertedWith('SENDER_NOT_ALLOWED');
+    });
+    it('should throw an error when a non-authorized account calls setAuthorizer', async () => {
+      const call = rwaRegistry.connect(lp).setAuthorizer(authorizer.address);
+
+      await expect(call).revertedWith('SENDER_NOT_ALLOWED');
+    });
+    it('should setAuthorizer properly', async () => {
+      const newAuthorizer = await deploy('Authorizer', { args: [admin.address] });
+
+      const setAuthorizerActionIdForRwaRegistry = await actionId(rwaRegistry, 'setAuthorizer');
+
+      await authorizer
+        .connect(admin)
+        .grantPermission(setAuthorizerActionIdForRwaRegistry, admin.address, rwaRegistry.address);
+
+      const call = rwaRegistry.connect(admin).setAuthorizer(newAuthorizer.address);
+      await expect(call).not.reverted;
     });
   });
 

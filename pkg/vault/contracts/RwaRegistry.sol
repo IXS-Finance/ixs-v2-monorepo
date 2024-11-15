@@ -18,26 +18,56 @@ pragma experimental ABIEncoderV2;
 import "@balancer-labs/v2-interfaces/contracts/vault/IRwaRegistry.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/IAsset.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
+import "@balancer-labs/v2-interfaces/contracts/vault/IAuthorizer.sol";
 import "@balancer-labs/v2-interfaces/contracts/solidity-utils/helpers/BalancerErrors.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/RwaDataTypes.sol";
 
-contract RwaRegistry is IRwaRegistry {
+import "@balancer-labs/v2-solidity-utils/contracts/helpers/Authentication.sol";
+import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/ReentrancyGuard.sol";
+
+contract RwaRegistry is IRwaRegistry, ReentrancyGuard, Authentication {
+    IAuthorizer private _authorizer;
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     // this is copied from VaultAuthorization.sol
     bytes32 internal constant _SWAP_TYPE_HASH = 0xe192dcbc143b1e244ad73b813fd3c097b832ad260a157340b4e5e5beda067abe;
     mapping(address => bool) internal _isRwaToken;
     mapping(address => mapping(address => uint256)) internal _nextNonce;
 
+    constructor(IAuthorizer authorizer) Authentication(bytes32(uint256(address(this)))) {
+        _authorizer = authorizer;
+    }
+
+    function setAuthorizer(IAuthorizer newAuthorizer) external override nonReentrant authenticate {
+        _setAuthorizer(newAuthorizer);
+    }
+
+    function _setAuthorizer(IAuthorizer newAuthorizer) private {
+        _authorizer = newAuthorizer;
+    }
+
+    function _canPerform(bytes32 actionId, address user) internal view override returns (bool) {
+        // Access control is delegated to the Authorizer.
+        return _authorizer.canPerform(actionId, user, address(this));
+    }
+
     function getNextNonceByOperator(address operator, address account) public view override returns (uint256) {
         return _nextNonce[operator][account];
     }
 
     function addToken(address tokenAddress) external override {
+        bool canPerform = _authorizer.canPerform(OPERATOR_ROLE, msg.sender, address(this));
+        _require(canPerform, Errors.SENDER_NOT_ALLOWED);
         _isRwaToken[tokenAddress] = true;
+
+        emit AddedToken(tokenAddress, msg.sender);
     }
 
     function removeToken(address tokenAddress) external override {
+        bool canPerform = _authorizer.canPerform(OPERATOR_ROLE, msg.sender, address(this));
+        _require(canPerform, Errors.SENDER_NOT_ALLOWED);
         _isRwaToken[tokenAddress] = false;
+
+        emit RemovedToken(tokenAddress, msg.sender);
     }
 
     function isRwaToken(address tokenAddress) public view override returns (bool) {
@@ -78,11 +108,10 @@ contract RwaRegistry is IRwaRegistry {
         address to,
         RwaDataTypes.RwaAuthorizationData calldata authorization,
         uint256 deadline,
-        IAuthorizer authorizer,
         bytes32 domainSeparatorV4
     ) external override {
         // Check if the operator has the required role
-        bool canPerform = authorizer.canPerform(OPERATOR_ROLE, authorization.operator, address(this));
+        bool canPerform = _authorizer.canPerform(OPERATOR_ROLE, authorization.operator, address(this));
         _require(canPerform, Errors.SENDER_NOT_ALLOWED);
 
         bytes32 structHash = keccak256(
