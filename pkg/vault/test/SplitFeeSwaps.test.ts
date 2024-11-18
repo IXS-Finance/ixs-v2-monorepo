@@ -67,7 +67,7 @@ describe('Swaps', () => {
 
     ({ instance: vault, authorizer } = await Vault.create({ admin }));
 
-    poolFeesCollector = await deployedAt('PoolFees', await vault.getPoolFeeCollector());
+    poolFeesCollector = await deployedAt('PoolFees', await vault.getPoolFeesCollector());
 
     // Contortions required to get the Vault's version of WETH to be in tokens
     const wethContract = await deployedAt('v2-standalone-utils/TestWETH', await vault.WETH());
@@ -171,8 +171,10 @@ describe('Swaps', () => {
           await vault
             .connect(sender)
             .batchSwap(SwapKind.GivenIn, swaps, tokenAddresses, funds, limits, deadline, { value: bn(1e18) });
-          const ratio = await vault.getIndexRatio(mainPoolId, tokens.WETH.address);
-          expect(ratio).to.be.equal(bn(3e9)); // (3e15 * 1e18) / (1e6 * 1e18)
+          const ratioWETH = await vault.getIndexRatio(mainPoolId, tokens.WETH.address);
+          expect(ratioWETH).to.be.equal(bn(3e9)); // (3e15 * 1e18) / (1e6 * 1e18)
+          const ratioDAI = await vault.getIndexRatio(mainPoolId, tokens.DAI.address);
+          expect(ratioDAI).to.be.equal(bn(0));
         });
 
         it('received ETH is wrapped into WETH', async () => {
@@ -436,7 +438,7 @@ describe('Swaps', () => {
   }
 
   async function deploySplitFeePool(specialization: PoolSpecialization, tokenSymbols: string[]): Promise<string> {
-    const pool = await deploy('MockPool1', { args: [vault.address, specialization] });
+    const pool = await deploy('MockPool_SF_Swap', { args: [vault.address, specialization] });
     await pool.setMultiplier(fp(2));
 
     // Register tokens

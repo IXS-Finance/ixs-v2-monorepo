@@ -22,7 +22,8 @@ import "@balancer-labs/v2-interfaces/contracts/vault/IMinimalSwapInfoPool.sol";
 
 import "@balancer-labs/v2-solidity-utils/contracts/math/FixedPoint.sol";
 
-contract MockPool1 is IGeneralPool, IMinimalSwapInfoPool {
+// mock pool for testing fee splitting in case of joining and exiting pool
+contract MockPool_SF_JoinExit is IGeneralPool, IMinimalSwapInfoPool {
     using FixedPoint for uint256;
 
     IVault private immutable _vault;
@@ -42,7 +43,7 @@ contract MockPool1 is IGeneralPool, IMinimalSwapInfoPool {
     }
 
     function getSwapFeePercentage() external pure override returns (uint256) {
-        return 3000000000000000;
+        return 0;
     }
 
     function getScalingFactors() external pure override returns (uint256[] memory) {
