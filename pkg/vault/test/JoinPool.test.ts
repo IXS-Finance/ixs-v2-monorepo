@@ -18,10 +18,11 @@ import { arraySub, bn, BigNumberish, min, fp } from '@balancer-labs/v2-helpers/s
 import { PoolSpecialization, RelayerAuthorization } from '@balancer-labs/balancer-js';
 import Vault from '@balancer-labs/v2-helpers/src/models/vault/Vault';
 import { sharedBeforeEach } from '@balancer-labs/v2-common/sharedBeforeEach';
+import { getAddress } from 'ethers/lib/utils';
 
 describe('Join Pool', () => {
   let admin: SignerWithAddress, creator: SignerWithAddress, lp: SignerWithAddress, relayer: SignerWithAddress;
-  let authorizer: Contract, vault: Contract, feesCollector: Contract;
+  let authorizer: Contract, vault: Contract, feesCollector: Contract, poolFeesCollector: Contract;
   let allTokens: TokenList;
 
   before(async () => {
@@ -35,6 +36,7 @@ describe('Join Pool', () => {
       bufferPeriodDuration: MONTH,
     }));
     feesCollector = await deployedAt('ProtocolFeesCollector', await vault.getProtocolFeesCollector());
+    poolFeesCollector = await deployedAt('PoolFees', await vault.getPoolFeesCollector());
 
     const action = await actionId(feesCollector, 'setSwapFeePercentage');
     await authorizer.connect(admin).grantPermission(action, admin.address, ANY_ADDRESS);
@@ -70,7 +72,7 @@ describe('Join Pool', () => {
     }
 
     sharedBeforeEach('deploy & register pool', async () => {
-      pool = await deploy('MockPool', { args: [vault.address, specialization] });
+      pool = await deploy('MockPool_SF_JoinExit', { args: [vault.address, specialization] });
       poolId = await pool.getPoolId();
     });
 
@@ -308,6 +310,7 @@ describe('Join Pool', () => {
               const fromRelayer = false;
 
               itJoinsCorrectlyWithAndWithoutInternalBalance(dueProtocolFeeAmounts, fromRelayer);
+              itJoinsCorrectlyAfterFee(dueProtocolFeeAmounts, fromRelayer, false);
             });
           });
 
@@ -440,9 +443,15 @@ describe('Join Pool', () => {
             [
               { account: lp, changes: lpChanges },
               { account: vault, changes: vaultChanges },
-              { account: feesCollector, changes: protocolFeesChanges },
+            //   { account: feesCollector, changes: protocolFeesChanges },
+              { account: poolFeesCollector, changes: protocolFeesChanges },
             ]
           );
+        //   if (dueProtocolFeeAmounts.length > 0) {
+        //     const add = allTokens.DAI.address;
+        //     const ratio = await vault.getIndexRatio(poolId, add);
+        //     expect(ratio).to.equal(bn(1e12)); // fee amount= 1e18 => ratio = 1e18 * 1e18 / totalSupply (1e6 * 1e18)
+        //   }
         });
 
         it('deducts internal balance from the LP', async () => {
@@ -511,13 +520,13 @@ describe('Join Pool', () => {
           });
         });
 
-        it('collects protocol fees', async () => {
-          const previousCollectedFees: BigNumber[] = await feesCollector.getCollectedFeeAmounts(tokens.addresses);
-          await joinPool({ dueProtocolFeeAmounts, fromRelayer, fromInternalBalance, signature });
-          const currentCollectedFees: BigNumber[] = await feesCollector.getCollectedFeeAmounts(tokens.addresses);
+        // it('collects protocol fees', async () => {
+        //   const previousCollectedFees: BigNumber[] = await feesCollector.getCollectedFeeAmounts(tokens.addresses);
+        //   await joinPool({ dueProtocolFeeAmounts, fromRelayer, fromInternalBalance, signature });
+        //   const currentCollectedFees: BigNumber[] = await feesCollector.getCollectedFeeAmounts(tokens.addresses);
 
-          expect(arraySub(currentCollectedFees, previousCollectedFees)).to.deep.equal(dueProtocolFeeAmounts);
-        });
+        //   expect(arraySub(currentCollectedFees, previousCollectedFees)).to.deep.equal(dueProtocolFeeAmounts);
+        // });
 
         it('joins multiple times', async () => {
           await Promise.all(
@@ -559,6 +568,63 @@ describe('Join Pool', () => {
                 joinPool({ dueProtocolFeeAmounts, fromRelayer, fromInternalBalance, signature })
               ).to.be.revertedWith('ERC20_TRANSFER_EXCEEDS_BALANCE');
             }
+          });
+        });
+      }
+      function itJoinsCorrectlyAfterFee(
+        dueProtocolFeeAmounts: BigNumberish[],
+        fromRelayer: boolean,
+        fromInternalBalance: boolean,
+        signature?: boolean
+      ) {
+        let expectedInternalBalanceToUse: BigNumber[];
+
+        sharedBeforeEach('calculate intermediate values', async () => {
+          const currentInternalBalances: BigNumber[] = await vault.getInternalBalance(lp.address, tokens.addresses);
+
+          expectedInternalBalanceToUse = currentInternalBalances.map((balance, i) =>
+            // If withdrawing from internal balance, the amount to withdraw is limited by the lower of the current
+            // balance and the actual join amount.
+            fromInternalBalance ? min(balance, joinAmounts[i]) : bn(0)
+          );
+        });
+
+        it('Update ratio after joining pool', async () => {
+          // Tokens are sent from the LP, so the expected change is negative
+          const expectedTransferAmounts = arraySub(joinAmounts, expectedInternalBalanceToUse);
+          const lpChanges = tokens.reduce(
+            (changes, token, i) => ({ ...changes, [token.symbol]: expectedTransferAmounts[i].mul(-1) }),
+            {}
+          );
+
+          // Tokens are sent to the Vault, so the expected change is positive
+          const expectedVaultChanges = arraySub(expectedTransferAmounts, dueProtocolFeeAmounts);
+          const vaultChanges = tokens.reduce(
+            (changes, token, i) => ({ ...changes, [token.symbol]: expectedVaultChanges[i] }),
+            {}
+          );
+
+          // Tokens are sent to the Protocol Fees, so the expected change is positive
+          const protocolFeesChanges = tokens.reduce(
+            (changes, token, i) => ({ ...changes, [token.symbol]: dueProtocolFeeAmounts[i] }),
+            {}
+          );
+
+          await expectBalanceChange(
+            () => joinPool({ dueProtocolFeeAmounts, fromRelayer, fromInternalBalance, signature }),
+            allTokens,
+            [
+              { account: lp, changes: lpChanges },
+              { account: vault, changes: vaultChanges },
+            //   { account: feesCollector, changes: protocolFeesChanges },
+              { account: poolFeesCollector, changes: protocolFeesChanges },
+            ]
+          );
+
+          // assert the ratio after joining pool
+          await tokens.asyncEach(async (token) => {
+            const ratio = await vault.getIndexRatio(poolId, token.address);
+            expect(ratio).to.equal(bn(1e12)); // fee amount= 1e18 => ratio = 1e18 * 1e18 / totalSupply (1e6 * 1e18)
           });
         });
       }
