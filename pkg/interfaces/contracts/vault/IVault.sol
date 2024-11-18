@@ -793,7 +793,7 @@ interface IVault is ISignaturesValidator, ITemporarilyPausable, IAuthentication 
     /**
      * @dev Return address of Pool Fee collector contract
      */
-    function getPoolFeeCollector() external view returns (IPoolFees);
+    function getPoolFeesCollector() external view returns (IPoolFees);
 
     /**
      * @dev Return index ratio

@@ -34,11 +34,11 @@ abstract contract Fees is IVault {
     using SafeERC20 for IERC20;
 
     ProtocolFeesCollector private immutable _protocolFeesCollector;
-    PoolFees private immutable _poolFeeCollector;
+    PoolFees private immutable _poolFeesCollector;
 
     constructor() {
         _protocolFeesCollector = new ProtocolFeesCollector(IVault(this));
-        _poolFeeCollector = new PoolFees(address(this));
+        _poolFeesCollector = new PoolFees(address(this));
     }
     
     function getProtocolFeesCollector() public view override returns (IProtocolFeesCollector) {
@@ -52,8 +52,8 @@ abstract contract Fees is IVault {
         return getProtocolFeesCollector().getSwapFeePercentage();
     }
 
-    function getPoolFeeCollector() public view override returns (IPoolFees) {
-        return _poolFeeCollector;
+    function getPoolFeesCollector() public view override returns (IPoolFees) {
+        return _poolFeesCollector;
     }
 
     /**
@@ -68,7 +68,7 @@ abstract contract Fees is IVault {
 
     function _payFeeAmount(IERC20 token, uint256 amount) internal {
         if (amount > 0) {
-            token.safeTransfer(address(getPoolFeeCollector()), amount);
+            token.safeTransfer(address(getPoolFeesCollector()), amount);
         }
     }
 }

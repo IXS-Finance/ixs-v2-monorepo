@@ -242,7 +242,7 @@ abstract contract PoolBalances is Fees, ReentrancyGuard, PoolTokens, UserBalance
             }
 
             uint256 feeAmount = dueProtocolFeeAmounts[i];
-            _payFeeAmount(_translateToIERC20(asset), feeAmount);
+            // _payFeeAmount(_translateToIERC20(asset), feeAmount);
 
             // Compute the new Pool balances. Note that the fee amount might be larger than `amountIn`,
             // resulting in an overall decrease of the Pool's balance for a token.
@@ -279,7 +279,7 @@ abstract contract PoolBalances is Fees, ReentrancyGuard, PoolTokens, UserBalance
             _sendAsset(asset, amountOut, recipient, change.useInternalBalance);
 
             uint256 feeAmount = dueProtocolFeeAmounts[i];
-            _payFeeAmount(_translateToIERC20(asset), feeAmount);
+            // _payFeeAmount(_translateToIERC20(asset), feeAmount);
 
             // Compute the new Pool balances. A Pool's token balance always decreases after an exit (potentially by 0).
             finalBalances[i] = balances[i].decreaseCash(amountOut.add(feeAmount));
@@ -338,7 +338,7 @@ abstract contract PoolBalances is Fees, ReentrancyGuard, PoolTokens, UserBalance
         if (_feeAmount == 0) return;
         address _poolAddr;
         (_poolAddr, ) = IVault(this).getPool(_poolId);
-        IERC20(_token).safeTransfer(address(IVault(this).getPoolFeeCollector()), _feeAmount); // transfer the fees out to PoolFees
+        IERC20(_token).safeTransfer(address(IVault(this).getPoolFeesCollector()), _feeAmount); // transfer the fees out to PoolFees
         uint256 _ratio = (_feeAmount * 1e18) / IERC20(_poolAddr).totalSupply(); // 1e18 adjustment is removed during claim
         if (_ratio > 0) {
             indexRatio[_poolId][_token] += _ratio;
