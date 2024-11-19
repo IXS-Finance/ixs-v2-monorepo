@@ -557,6 +557,80 @@ describe('Swaps', () => {
         });
       };
 
+      const assertPoolFeesSwapGivenIn = (
+        input: SwapInput,
+        changes?: Dictionary<BigNumberish | Comparison>,
+        expectedInternalBalance?: Dictionary<BigNumberish>
+      ) => {
+        const isSingleSwap = input.swaps.length === 1;
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const assertSwap = async (data: string, sender: SignerWithAddress, expectedChanges: any[]): Promise<void> => {
+          // Hardcoding a gas limit prevents (slow) gas estimation
+          await expectBalanceChange(
+            () => sender.sendTransaction({ to: vault.address, data, gasLimit: MAX_GAS_LIMIT }),
+            tokens,
+            expectedChanges
+          );
+
+          if (expectedInternalBalance) {
+            for (const symbol in expectedInternalBalance) {
+              const token = tokens.findBySymbol(symbol);
+              const internalBalance = await vault.getInternalBalance(sender.address, [token.address]);
+              expect(internalBalance[0]).to.be.equal(bn(expectedInternalBalance[symbol]));
+            }
+          }
+        };
+        if (isSingleSwap) {
+          it('Check Pool Fees trades the expected amount (single)', async () => {
+            const sender = input.fromOther ? other : trader;
+            const recipient = input.toOther ? other : trader;
+            const swap = toSingleSwap(SwapKind.GivenIn, input);
+
+            let calldata = vault.interface.encodeFunctionData('swap', [swap, funds, 0, MAX_UINT256]);
+
+            if (input.signature) {
+              const nonce = await vault.getNextNonce(trader.address);
+              const authorization = await RelayerAuthorization.signSwapAuthorization(
+                vault,
+                trader,
+                sender.address,
+                calldata,
+                MAX_UINT256,
+                nonce
+              );
+              const signature = typeof input.signature === 'string' ? input.signature : authorization;
+              calldata = RelayerAuthorization.encodeCalldataAuthorization(calldata, MAX_UINT256, signature);
+            }
+
+            await assertSwap(calldata, sender, [{ account: poolFeesCollector, changes }]);
+          });
+        }
+        it(`Check Pool Fees trades the expected amount ${isSingleSwap ? '(batch)' : ''}`, async () => {
+          const sender = input.fromOther ? other : trader;
+          const recipient = input.toOther ? other : trader;
+          const swaps = toBatchSwap(input);
+          const limits = Array(tokens.length).fill(MAX_INT256);
+
+          const args = [SwapKind.GivenIn, swaps, tokens.addresses, funds, limits, MAX_UINT256];
+          let calldata = vault.interface.encodeFunctionData('batchSwap', args);
+          if (input.signature) {
+            const nonce = await vault.getNextNonce(trader.address);
+            const authorization = await RelayerAuthorization.signBatchSwapAuthorization(
+              vault,
+              trader,
+              sender.address,
+              calldata,
+              MAX_UINT256,
+              nonce
+            );
+            const signature = typeof input.signature === 'string' ? input.signature : authorization;
+            calldata = RelayerAuthorization.encodeCalldataAuthorization(calldata, MAX_UINT256, signature);
+          }
+          await assertSwap(calldata, sender, [{ account: poolFeesCollector, changes }]);
+        });
+      };
+
       const assertSwapGivenInReverts = (input: SwapInput, defaultReason?: string, singleSwapReason = defaultReason) => {
         const isSingleSwap = input.swaps.length === 1;
 
@@ -600,8 +674,8 @@ describe('Swaps', () => {
                       context('when using managed balance', () => {
                         context('when the sender is the user', () => {
                           const fromOther = false;
-
                           assertSwapGivenIn({ swaps, fromOther }, { DAI: 2e18, MKR: -1e18 });
+                          assertPoolFeesSwapGivenIn({ swaps, fromOther }, { MKR: 3e15 });
                         });
 
                         context('when the sender is a relayer', () => {
@@ -621,6 +695,7 @@ describe('Swaps', () => {
                               });
 
                               assertSwapGivenIn({ swaps, fromOther }, { DAI: 2e18, MKR: -1e18 });
+                              assertPoolFeesSwapGivenIn({ swaps, fromOther }, { MKR: 3e15 });
                             });
 
                             context('when the relayer is not allowed by the user', () => {
@@ -630,6 +705,7 @@ describe('Swaps', () => {
 
                               context('when the relayer has a valid signature from the user', () => {
                                 assertSwapGivenIn({ swaps, fromOther, signature: true }, { DAI: 2e18, MKR: -1e18 });
+                                assertPoolFeesSwapGivenIn({ swaps, fromOther, signature: true }, { MKR: 3e15 });
                               });
 
                               context('when the relayer has an invalid signature from the user', () => {
@@ -702,6 +778,7 @@ describe('Swaps', () => {
                           });
 
                           assertSwapGivenIn({ swaps }, { DAI: 2e18 }, { MKR: 0, DAI: 1e18 });
+                          assertPoolFeesSwapGivenIn({ swaps }, { MKR: 3e15 });
                         });
 
                         context('when using more than available as internal balance', () => {
@@ -718,6 +795,7 @@ describe('Swaps', () => {
                           });
 
                           assertSwapGivenIn({ swaps }, { DAI: 2e18, MKR: -0.7e18 }, { MKR: 0 });
+                          assertPoolFeesSwapGivenIn({ swaps }, { MKR: 3e15 });
                         });
                       });
 
@@ -727,6 +805,7 @@ describe('Swaps', () => {
                         });
 
                         assertSwapGivenIn({ swaps }, { MKR: -1e18 });
+                        assertPoolFeesSwapGivenIn({ swaps }, { MKR: 3e15 });
                       });
                     });
 
@@ -804,6 +883,7 @@ describe('Swaps', () => {
             ];
 
             assertSwapGivenIn({ swaps }, { MKR: 3e18 });
+            assertPoolFeesSwapGivenIn({ swaps }, { MKR: 3e15, DAI: 6e15 });
           });
 
           context('with another pool', () => {
@@ -821,6 +901,7 @@ describe('Swaps', () => {
                   ];
 
                   assertSwapGivenIn({ swaps }, { DAI: 4e18, MKR: -2e18 });
+                  assertPoolFeesSwapGivenIn({ swaps }, { MKR: 6e15 });
                 });
 
                 context('for a multi pair', () => {
@@ -833,6 +914,7 @@ describe('Swaps', () => {
                     ];
 
                     assertSwapGivenIn({ swaps }, { MKR: 3e18 });
+                    assertPoolFeesSwapGivenIn({ swaps }, { MKR: 3e15, DAI: 6e15 });
                   });
 
                   context('when pools do not offer same price', () => {
@@ -854,11 +936,12 @@ describe('Swaps', () => {
                     const swaps = [
                       // Sell 1e18 DAI for 2e18 MKR
                       { pool: 1, in: 0, out: 1, amount: 1e18 },
-                      // Buy 2e18 DAI with 2e18 MKR
+                      // Buy 2e18 DAI with 1e18 MKR
                       { pool: 0, in: 1, out: 0, amount: 1e18 },
                     ];
 
                     assertSwapGivenIn({ swaps, fromOther: true, toOther: true }, { MKR: 1e18 });
+                    assertPoolFeesSwapGivenIn({ swaps, fromOther: true, toOther: true }, { MKR: 3e15, DAI: 3e15 });
                   });
                 });
               };
@@ -889,6 +972,7 @@ describe('Swaps', () => {
                   ];
 
                   assertSwapGivenIn({ swaps }, { DAI: 4e18, MKR: -2e18 });
+                  assertPoolFeesSwapGivenIn({ swaps }, { MKR: 6e15 });
                 });
 
                 context('for a multi pair', () => {
@@ -900,6 +984,7 @@ describe('Swaps', () => {
                   ];
 
                   assertSwapGivenIn({ swaps }, { SNX: 4e18, MKR: -1e18 });
+                  assertPoolFeesSwapGivenIn({ swaps }, { MKR: 3e15, DAI: 6e15 });
                 });
               };
 
@@ -927,6 +1012,7 @@ describe('Swaps', () => {
               ];
 
               assertSwapGivenIn({ swaps }, { MKR: 3e18 });
+              assertPoolFeesSwapGivenIn({ swaps }, { MKR: 3e15, DAI: 6e15 });
             });
 
             context('when token in and out mismatch', () => {
@@ -956,6 +1042,7 @@ describe('Swaps', () => {
                 ];
 
                 assertSwapGivenIn({ swaps }, { MKR: 3e18 });
+                assertPoolFeesSwapGivenIn({ swaps }, { MKR: 3e15, DAI: 6e15 });
               };
 
               context('with a general pool', () => {
@@ -985,6 +1072,7 @@ describe('Swaps', () => {
                 ];
 
                 assertSwapGivenIn({ swaps }, { SNX: 4e18, MKR: -1e18 });
+                assertPoolFeesSwapGivenIn({ swaps }, { MKR: 3e15, DAI: 6e15 });
               };
 
               context('with a general pool', () => {
@@ -1050,6 +1138,55 @@ describe('Swaps', () => {
           }
         });
       };
+      const assertPoolFeeSwapGivenOut = (
+        input: SwapInput,
+        changes?: Dictionary<BigNumberish | Comparison>,
+        expectedInternalBalance?: Dictionary<BigNumberish>
+      ) => {
+        const isSingleSwap = input.swaps.length === 1;
+
+        if (isSingleSwap) {
+          it('Check pool fees - trades the expected amount (single)', async () => {
+            const sender = input.fromOther ? other : trader;
+            const recipient = input.toOther ? other : trader;
+            const swap = toSingleSwap(SwapKind.GivenOut, input);
+            await expectBalanceChange(() => vault.connect(sender).swap(swap, funds, MAX_UINT256, MAX_UINT256), tokens, [
+              { account: poolFeesCollector, changes },
+            ]);
+
+            if (expectedInternalBalance) {
+              for (const symbol in expectedInternalBalance) {
+                const token = tokens.findBySymbol(symbol);
+                const internalBalance = await vault.getInternalBalance(sender.address, [token.address]);
+                expect(internalBalance[0]).to.be.equal(bn(expectedInternalBalance[symbol]));
+              }
+            }
+          });
+        }
+
+        it(`Check pool fees - trades the expected amount ${isSingleSwap ? '(batch)' : ''}`, async () => {
+          const sender = input.fromOther ? other : trader;
+          const recipient = input.toOther ? other : trader;
+          const swaps = toBatchSwap(input);
+
+          const limits = Array(tokens.length).fill(MAX_INT256);
+          const deadline = MAX_UINT256;
+
+          await expectBalanceChange(
+            () => vault.connect(sender).batchSwap(SwapKind.GivenOut, swaps, tokens.addresses, funds, limits, deadline),
+            tokens,
+            [{ account: poolFeesCollector, changes }]
+          );
+
+          if (expectedInternalBalance) {
+            for (const symbol in expectedInternalBalance) {
+              const token = tokens.findBySymbol(symbol);
+              const internalBalance = await vault.getInternalBalance(sender.address, [token.address]);
+              expect(internalBalance[0]).to.be.equal(bn(expectedInternalBalance[symbol]));
+            }
+          }
+        });
+      };
 
       const assertSwapGivenOutReverts = (
         input: SwapInput,
@@ -1101,6 +1238,7 @@ describe('Swaps', () => {
                           const fromOther = false;
 
                           assertSwapGivenOut({ swaps, fromOther }, { DAI: 1e18, MKR: -0.5e18 });
+                          assertPoolFeeSwapGivenOut({ swaps, fromOther }, { MKR: 15e14 });
                         });
 
                         context('when the sender is a relayer', () => {
@@ -1120,6 +1258,7 @@ describe('Swaps', () => {
                               });
 
                               assertSwapGivenOut({ swaps, fromOther }, { DAI: 1e18, MKR: -0.5e18 });
+                              assertPoolFeeSwapGivenOut({ swaps, fromOther }, { MKR: 15e14 });
                             });
 
                             context('when the relayer is not allowed by the user', () => {
@@ -1188,6 +1327,7 @@ describe('Swaps', () => {
                           });
 
                           assertSwapGivenOut({ swaps }, { DAI: 1e18 }, { MKR: 0, DAI: 1e18 });
+                          assertPoolFeeSwapGivenOut({ swaps }, { MKR: 15e14 }, { MKR: 0, DAI: 1e18 });
                         });
 
                         context('when using more than available as internal balance', () => {
@@ -1204,6 +1344,7 @@ describe('Swaps', () => {
                           });
 
                           assertSwapGivenOut({ swaps }, { DAI: 1e18, MKR: -0.2e18 });
+                          assertPoolFeeSwapGivenOut({ swaps }, { MKR: 15e14 });
                         });
                       });
 
@@ -1213,6 +1354,7 @@ describe('Swaps', () => {
                         });
 
                         assertSwapGivenOut({ swaps }, { MKR: -0.5e18 });
+                        assertPoolFeeSwapGivenOut({ swaps }, { MKR: 15e14 });
                       });
                     });
 
@@ -1223,6 +1365,7 @@ describe('Swaps', () => {
                         { swaps },
                         { DAI: poolInitialBalance, MKR: poolInitialBalance.div(2).mul(-1) }
                       );
+                      assertPoolFeeSwapGivenOut({ swaps }, { MKR: poolInitialBalance.div(2).mul(3).div(1000) });
                     });
 
                     context('when requesting more than the available balance', () => {
@@ -1293,6 +1436,7 @@ describe('Swaps', () => {
             ];
 
             assertSwapGivenOut({ swaps }, { MKR: 1.5e18 });
+            assertPoolFeeSwapGivenOut({ swaps }, { MKR: 15e14, DAI: 3e15 });
           });
 
           context('with another pool', () => {
@@ -1310,6 +1454,7 @@ describe('Swaps', () => {
                   ];
 
                   assertSwapGivenOut({ swaps }, { DAI: 2e18, MKR: -1e18 });
+                  assertPoolFeeSwapGivenOut({ swaps }, { MKR: 3e15 });
                 });
 
                 context('for a multi pair', () => {
@@ -1322,6 +1467,7 @@ describe('Swaps', () => {
                     ];
 
                     assertSwapGivenOut({ swaps }, { MKR: 1.5e18 });
+                    assertPoolFeeSwapGivenOut({ swaps }, { MKR: 15e14, DAI: 3e15 });
                   });
 
                   context('when pools do not offer same price', () => {
@@ -1348,6 +1494,7 @@ describe('Swaps', () => {
                     ];
 
                     assertSwapGivenOut({ swaps, fromOther: true, toOther: true }, { MKR: 1e18 });
+                    assertPoolFeeSwapGivenOut({ swaps, fromOther: true, toOther: true }, { MKR: 3e15, DAI: 3e15 });
                   });
                 });
               };
@@ -1378,6 +1525,7 @@ describe('Swaps', () => {
                   ];
 
                   assertSwapGivenOut({ swaps }, { DAI: 2e18, MKR: -1e18 });
+                  assertPoolFeeSwapGivenOut({ swaps }, { MKR: 3e15 });
                 });
 
                 context('for a multi pair', () => {
@@ -1389,6 +1537,7 @@ describe('Swaps', () => {
                   ];
 
                   assertSwapGivenOut({ swaps }, { DAI: 1e18, SNX: 1e18, MKR: -1e18 });
+                  assertPoolFeeSwapGivenOut({ swaps }, { MKR: 3e15 });
                 });
               };
 
@@ -1414,6 +1563,7 @@ describe('Swaps', () => {
               ];
 
               assertSwapGivenOut({ swaps }, { MKR: 0.75e18 });
+              assertPoolFeeSwapGivenOut({ swaps }, { MKR: 75e13, DAI: 15e14 });
             });
 
             context('when token in and out mismatch', () => {
@@ -1441,6 +1591,7 @@ describe('Swaps', () => {
                 ];
 
                 assertSwapGivenOut({ swaps }, { MKR: 0.75e18 });
+                assertPoolFeeSwapGivenOut({ swaps }, { MKR: 75e13, DAI: 15e14 });
               };
 
               context('with a general pool', () => {
@@ -1470,6 +1621,7 @@ describe('Swaps', () => {
                 ];
 
                 assertSwapGivenOut({ swaps }, { MKR: 1e18, SNX: -0.25e18 });
+                assertPoolFeeSwapGivenOut({ swaps }, { SNX: 75e13, DAI: 15e14 });
               };
 
               context('with a general pool', () => {
