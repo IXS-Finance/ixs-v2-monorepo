@@ -41,7 +41,7 @@ abstract contract PoolBalances is Fees, ReentrancyGuard, PoolTokens, UserBalance
     using BalanceAllocation for bytes32;
     using BalanceAllocation for bytes32[];
 
-    mapping(bytes32 => mapping(address => uint256)) internal indexRatio;
+    // mapping(bytes32 => mapping(address => uint256)) internal indexRatio;
 
     function joinPool(
         bytes32 poolId,
@@ -207,7 +207,10 @@ abstract contract PoolBalances is Fees, ReentrancyGuard, PoolTokens, UserBalance
         
         for (uint256 i = 0; i < change.assets.length; ++i) {
             IAsset asset = change.assets[i];
-            _updates(poolId, address(asset), dueProtocolFeeAmounts[i]);
+            // _updates(poolId, address(asset), dueProtocolFeeAmounts[i]);
+            IERC20(address(asset)).safeTransfer(address(IVault(this).getPoolFeesCollector()), dueProtocolFeeAmounts[i]); // transfer the fees out to PoolFees
+
+            _poolFeesCollector.updateRatio(poolId, address(asset), dueProtocolFeeAmounts[i]);
         }
     }
 
@@ -323,25 +326,25 @@ abstract contract PoolBalances is Fees, ReentrancyGuard, PoolTokens, UserBalance
         }
     }
 
-    /**
-     * @dev update index ratio after each swap
-     * @param _poolId pool id
-     * @param _token tokenIn address
-     * @param _feeAmount swapping fee
-     */
-    function _updates(
-        bytes32 _poolId,
-        address _token,
-        uint256 _feeAmount
-    ) internal {
-        // Only update on this pool if there is a fee
-        if (_feeAmount == 0) return;
-        address _poolAddr;
-        (_poolAddr, ) = IVault(this).getPool(_poolId);
-        IERC20(_token).safeTransfer(address(IVault(this).getPoolFeesCollector()), _feeAmount); // transfer the fees out to PoolFees
-        uint256 _ratio = (_feeAmount * 1e18) / IERC20(_poolAddr).totalSupply(); // 1e18 adjustment is removed during claim
-        if (_ratio > 0) {
-            indexRatio[_poolId][_token] += _ratio;
-        }
-    }
+    // /**
+    //  * @dev update index ratio after each swap
+    //  * @param _poolId pool id
+    //  * @param _token tokenIn address
+    //  * @param _feeAmount swapping fee
+    //  */
+    // function _updates(
+    //     bytes32 _poolId,
+    //     address _token,
+    //     uint256 _feeAmount
+    // ) internal {
+    //     // Only update on this pool if there is a fee
+    //     if (_feeAmount == 0) return;
+    //     address _poolAddr;
+    //     (_poolAddr, ) = IVault(this).getPool(_poolId);
+    //     IERC20(_token).safeTransfer(address(IVault(this).getPoolFeesCollector()), _feeAmount); // transfer the fees out to PoolFees
+    //     uint256 _ratio = (_feeAmount * 1e18) / IERC20(_poolAddr).totalSupply(); // 1e18 adjustment is removed during claim
+    //     if (_ratio > 0) {
+    //         indexRatio[_poolId][_token] += _ratio;
+    //     }
+    // }
 }

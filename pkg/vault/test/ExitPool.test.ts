@@ -39,7 +39,7 @@ describe('Exit Pool', () => {
     }));
     vault = vault.connect(lp);
     feesCollector = await deployedAt('ProtocolFeesCollector', await vault.getProtocolFeesCollector());
-    poolFeesCollector = await deployedAt('ProtocolFeesCollector', await vault.getPoolFeesCollector());
+    poolFeesCollector = await deployedAt('PoolFees', await vault.getPoolFeesCollector());
 
     const action = await actionId(feesCollector, 'setSwapFeePercentage');
     await authorizer.connect(admin).grantPermission(action, admin.address, ANY_ADDRESS);
@@ -654,7 +654,7 @@ describe('Exit Pool', () => {
 
             // assert the ratio after joining pool
             await tokens.asyncEach(async (token) => {
-                const ratio = await vault.getIndexRatio(poolId, token.address);
+                const ratio = await poolFeesCollector.getIndexRatio(poolId, token.address);
                 expect(ratio).to.equal(bn(1e12)); // fee amount= 1e18 => ratio = 1e18 * 1e18 / totalSupply (1e6 * 1e18)
             });
           });

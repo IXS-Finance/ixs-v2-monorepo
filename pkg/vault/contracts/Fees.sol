@@ -34,7 +34,7 @@ abstract contract Fees is IVault {
     using SafeERC20 for IERC20;
 
     ProtocolFeesCollector private immutable _protocolFeesCollector;
-    PoolFees private immutable _poolFeesCollector;
+    PoolFees internal immutable _poolFeesCollector;
 
     constructor() {
         _protocolFeesCollector = new ProtocolFeesCollector(IVault(this));

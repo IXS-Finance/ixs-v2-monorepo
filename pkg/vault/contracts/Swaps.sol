@@ -286,7 +286,11 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
         uint256 _swapFee = amountIn.mulUp(IProtocolFeesCollector(pool).getSwapFeePercentage());
 
         //update index ratio
-        _updates(request.poolId, address(request.tokenIn), _swapFee);
+        // _updates(request.poolId, address(request.tokenIn), _swapFee);
+
+        _poolFeesCollector.updateRatio(request.poolId, address(request.tokenIn), _swapFee);
+        IERC20(address(request.tokenIn)).safeTransfer(address(IVault(this).getPoolFeesCollector()), _swapFee); // transfer the fees out to PoolFees
+
         emit Swap(request.poolId, request.tokenIn, request.tokenOut, amountIn, amountOut);
     }
 
@@ -538,7 +542,7 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
         }
     }
 
-    function getIndexRatio(bytes32 _poolId, address _token) external view override returns (uint256) {
-        return indexRatio[_poolId][_token];
-    }
+    // function getIndexRatio(bytes32 _poolId, address _token) external view override returns (uint256) {
+    //     return indexRatio[_poolId][_token];
+    // }
 }

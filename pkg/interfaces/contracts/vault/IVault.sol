@@ -798,7 +798,5 @@ interface IVault is ISignaturesValidator, ITemporarilyPausable, IAuthentication 
     /**
      * @dev Return index ratio
      */
-    function getIndexRatio(bytes32 _poolId, address _token) external view returns (uint256);
-
-
+    // function getIndexRatio(bytes32 _poolId, address _token) external view returns (uint256);
 }

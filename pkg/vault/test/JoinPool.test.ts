@@ -623,7 +623,7 @@ describe('Join Pool', () => {
 
           // assert the ratio after joining pool
           await tokens.asyncEach(async (token) => {
-            const ratio = await vault.getIndexRatio(poolId, token.address);
+            const ratio = await poolFeesCollector.getIndexRatio(poolId, token.address);
             expect(ratio).to.equal(bn(1e12)); // fee amount= 1e18 => ratio = 1e18 * 1e18 / totalSupply (1e6 * 1e18)
           });
         });

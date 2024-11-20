@@ -166,14 +166,14 @@ describe('Swaps', () => {
               userData: '0x',
             },
           ];
-          const ratio_before = await vault.getIndexRatio(mainPoolId, tokens.WETH.address);
+          const ratio_before = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
           expect(ratio_before).to.be.equal(bn(0));
           await vault
             .connect(sender)
             .batchSwap(SwapKind.GivenIn, swaps, tokenAddresses, funds, limits, deadline, { value: bn(1e18) });
-          const ratioWETH = await vault.getIndexRatio(mainPoolId, tokens.WETH.address);
+          const ratioWETH = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
           expect(ratioWETH).to.be.equal(bn(3e9)); // (3e15 * 1e18) / (1e6 * 1e18)
-          const ratioDAI = await vault.getIndexRatio(mainPoolId, tokens.DAI.address);
+          const ratioDAI = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.DAI.address);
           expect(ratioDAI).to.be.equal(bn(0));
         });
 
