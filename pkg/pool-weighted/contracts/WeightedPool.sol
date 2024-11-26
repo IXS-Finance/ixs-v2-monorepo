@@ -261,7 +261,8 @@ contract WeightedPool is BaseWeightedPool, WeightedPoolProtocolFees {
         _payProtocolFees(protocolFeesToBeMinted);
 
         IVault v = getVault();
-        IPoolFees(v.getPoolFeesCollector()).updateRatio(bytes32(0), address(this), protocolFeesToBeMinted);
+        IPoolFees(v.getPoolFeesCollector()).updateRatio(getPoolId(), address(this), protocolFeesToBeMinted);
+        // test compile
 
         return (supplyBeforeFeeCollection.add(protocolFeesToBeMinted), invariant);
     }
@@ -286,7 +287,7 @@ contract WeightedPool is BaseWeightedPool, WeightedPoolProtocolFees {
         _payProtocolFees(protocolFeesToBeMinted);
 
         IVault v = getVault();
-        IPoolFees(v.getPoolFeesCollector()).updateRatio(bytes32(0), address(this), protocolFeesToBeMinted);
+        IPoolFees(v.getPoolFeesCollector()).updateRatio(getPoolId(), address(this), protocolFeesToBeMinted);
     }
 
     function _updatePostJoinExit(uint256 postJoinExitInvariant)
@@ -320,7 +321,7 @@ contract WeightedPool is BaseWeightedPool, WeightedPoolProtocolFees {
         _payProtocolFees(protocolFeesToBeMinted);
 
         IVault v = getVault();
-        IPoolFees(v.getPoolFeesCollector()).updateRatio(bytes32(0), address(this), protocolFeesToBeMinted);
+        IPoolFees(v.getPoolFeesCollector()).updateRatio(getPoolId(), address(this), protocolFeesToBeMinted);
 
         // With the fees paid, we now store the current invariant and update the ATH rate product (if necessary),
         // marking the Pool as free of protocol debt.

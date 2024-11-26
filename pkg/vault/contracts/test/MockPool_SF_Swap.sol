@@ -180,4 +180,9 @@ contract MockPool_SF_Swap is IGeneralPool, IMinimalSwapInfoPool {
     function totalSupply() external pure returns(uint256){
         return 1e6 * 1e18;
     }
+
+    function balanceOf(address a) external pure returns(uint256){
+        require(a != address(0), "balanceOf zero address");
+        return 1e5 * 1e18;
+    }
 }

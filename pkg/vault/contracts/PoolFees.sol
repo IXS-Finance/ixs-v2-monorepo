@@ -35,17 +35,16 @@ contract PoolFees is IPoolFees {
     mapping(address => mapping(bytes32 => mapping(address => uint256))) public claimable;
     mapping(bytes32 => mapping(address => uint256)) internal indexRatio;
 
-    bytes32 constant noPoolId = bytes32(0);
-
     constructor(address _vault) {
         vault = _vault;
     }
 
-    function _claimPoolTokensFees(bytes32 _poolId, address recipient) internal {
+    function _claimPoolTokensFees(bytes32 _poolId, address recipient) internal{
         require(_poolId != bytes32(0), "invalid poolId");
 
         IERC20[] memory tokens;
         (tokens, , ) = IVault(vault).getPoolTokens(_poolId);
+        claimable[msg.sender][_poolId][address(0)] = 0;
         require(tokens.length > 0, "no tokens in pool");
         for (uint256 i = 0; i < tokens.length; i++) {
             _updateSupplyIndex(msg.sender, _poolId, address(tokens[i]));
@@ -162,7 +161,7 @@ contract PoolFees is IPoolFees {
      * @param _token tokenIn address
      * @param _feeAmount swapping fee
      */
-    function updateR(
+    function updateRatio(
         bytes32 _poolId,
         address _token,
         uint256 _feeAmount
