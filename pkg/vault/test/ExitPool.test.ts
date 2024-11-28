@@ -255,79 +255,79 @@ describe('Exit Pool', () => {
             itExitsCorrectlyWithAndWithoutInternalBalance(dueProtocolFeeAmounts, fromRelayer);
           });
 
-          context('when the sender is a relayer', () => {
-            const fromRelayer = true;
+          // context('when the sender is a relayer', () => {
+          //   const fromRelayer = true;
 
-            context('when the relayer is whitelisted by the authorizer', () => {
-              sharedBeforeEach('grant permission to relayer', async () => {
-                const action = await actionId(vault, 'exitPool');
-                await authorizer.connect(admin).grantPermission(action, relayer.address, ANY_ADDRESS);
-              });
+          //   context('when the relayer is whitelisted by the authorizer', () => {
+          //     sharedBeforeEach('grant permission to relayer', async () => {
+          //       const action = await actionId(vault, 'exitPool');
+          //       await authorizer.connect(admin).grantPermission(action, relayer.address, ANY_ADDRESS);
+          //     });
 
-              context('when the relayer is allowed by the user', () => {
-                sharedBeforeEach('allow relayer', async () => {
-                  await vault.connect(lp).setRelayerApproval(lp.address, relayer.address, true);
-                });
+          //     context('when the relayer is allowed by the user', () => {
+          //       sharedBeforeEach('allow relayer', async () => {
+          //         await vault.connect(lp).setRelayerApproval(lp.address, relayer.address, true);
+          //       });
 
-                itExitsCorrectlyWithAndWithoutInternalBalance(dueProtocolFeeAmounts, fromRelayer);
-              });
+          //       itExitsCorrectlyWithAndWithoutInternalBalance(dueProtocolFeeAmounts, fromRelayer);
+          //     });
 
-              context('when the relayer is not allowed by the user', () => {
-                sharedBeforeEach('disallow relayer', async () => {
-                  await vault.connect(lp).setRelayerApproval(lp.address, relayer.address, false);
-                });
+          //     context('when the relayer is not allowed by the user', () => {
+          //       sharedBeforeEach('disallow relayer', async () => {
+          //         await vault.connect(lp).setRelayerApproval(lp.address, relayer.address, false);
+          //       });
 
-                context('when the relayer is not eternally-allowed by the user', () => {
-                  const signature = false;
+          //       context('when the relayer is not eternally-allowed by the user', () => {
+          //         const signature = false;
 
-                  it('reverts', async () => {
-                    await expect(exitPool({ dueProtocolFeeAmounts, fromRelayer, signature })).to.be.revertedWith(
-                      'USER_DOESNT_ALLOW_RELAYER'
-                    );
-                  });
-                });
+          //         it('reverts', async () => {
+          //           await expect(exitPool({ dueProtocolFeeAmounts, fromRelayer, signature })).to.be.revertedWith(
+          //             'USER_DOESNT_ALLOW_RELAYER'
+          //           );
+          //         });
+          //       });
 
-                context('when the relayer is allowed by signature', () => {
-                  const signature = true;
+          //       context('when the relayer is allowed by signature', () => {
+          //         const signature = true;
 
-                  itExitsCorrectlyWithAndWithoutInternalBalance(dueProtocolFeeAmounts, fromRelayer, signature);
-                });
-              });
-            });
+          //         itExitsCorrectlyWithAndWithoutInternalBalance(dueProtocolFeeAmounts, fromRelayer, signature);
+          //       });
+          //     });
+          //   });
 
-            context('when the relayer is not whitelisted by the authorizer', () => {
-              sharedBeforeEach('revoke permission from relayer', async () => {
-                const action = await actionId(vault, 'exitPool');
-                if (await authorizer.hasPermission(action, relayer.address, ANY_ADDRESS)) {
-                  await authorizer.connect(admin).revokePermission(action, relayer.address, ANY_ADDRESS);
-                }
-              });
+          //   context('when the relayer is not whitelisted by the authorizer', () => {
+          //     sharedBeforeEach('revoke permission from relayer', async () => {
+          //       const action = await actionId(vault, 'exitPool');
+          //       if (await authorizer.hasPermission(action, relayer.address, ANY_ADDRESS)) {
+          //         await authorizer.connect(admin).revokePermission(action, relayer.address, ANY_ADDRESS);
+          //       }
+          //     });
 
-              context('when the relayer is allowed by the user', () => {
-                sharedBeforeEach('allow relayer', async () => {
-                  await vault.connect(lp).setRelayerApproval(lp.address, relayer.address, true);
-                });
+          //     context('when the relayer is allowed by the user', () => {
+          //       sharedBeforeEach('allow relayer', async () => {
+          //         await vault.connect(lp).setRelayerApproval(lp.address, relayer.address, true);
+          //       });
 
-                it('reverts', async () => {
-                  await expect(exitPool({ dueProtocolFeeAmounts, fromRelayer })).to.be.revertedWith(
-                    'SENDER_NOT_ALLOWED'
-                  );
-                });
-              });
+          //       it('reverts', async () => {
+          //         await expect(exitPool({ dueProtocolFeeAmounts, fromRelayer })).to.be.revertedWith(
+          //           'SENDER_NOT_ALLOWED'
+          //         );
+          //       });
+          //     });
 
-              context('when the relayer is not allowed by the user', () => {
-                sharedBeforeEach('disallow relayer', async () => {
-                  await vault.connect(lp).setRelayerApproval(lp.address, relayer.address, false);
-                });
+          //     context('when the relayer is not allowed by the user', () => {
+          //       sharedBeforeEach('disallow relayer', async () => {
+          //         await vault.connect(lp).setRelayerApproval(lp.address, relayer.address, false);
+          //       });
 
-                it('reverts', async () => {
-                  await expect(exitPool({ dueProtocolFeeAmounts, fromRelayer })).to.be.revertedWith(
-                    'SENDER_NOT_ALLOWED'
-                  );
-                });
-              });
-            });
-          });
+          //       it('reverts', async () => {
+          //         await expect(exitPool({ dueProtocolFeeAmounts, fromRelayer })).to.be.revertedWith(
+          //           'SENDER_NOT_ALLOWED'
+          //         );
+          //       });
+          //     });
+          //   });
+          // });
         });
 
         context('with due protocol fees', () => {

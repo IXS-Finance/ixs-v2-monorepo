@@ -126,7 +126,7 @@ describe('GaugeActions', function () {
     await Promise.all(relayerActionIds.map((action) => vault.grantPermissionGlobally(action, relayer)));
 
     // Approve relayer by BPT holder
-    await vault.setRelayerApproval(userSender, relayer, true);
+    // await vault.setRelayerApproval(userSender, relayer, true);
 
     return { relayerLibrary, relayer };
   }

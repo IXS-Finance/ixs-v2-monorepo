@@ -87,7 +87,7 @@ contract PoolFees is IPoolFees {
 
         // Encode userData based on exitKind
         bytes memory userData;
-        userData = abi.encode(uint8(0), bptAmount);
+        userData = abi.encode(uint8(1), bptAmount); // EXACT_BPT_IN_FOR_TOKENS_OUT
 
         IVault.ExitPoolRequest memory request = IVault.ExitPoolRequest({
             assets: assets,

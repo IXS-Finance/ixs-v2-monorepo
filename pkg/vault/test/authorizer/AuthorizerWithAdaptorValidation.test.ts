@@ -25,7 +25,7 @@ describe('AuthorizerWithAdaptorValidation', () => {
   sharedBeforeEach('deploy actual authorizer and helper', async () => {
     actualAuthorizer = await deploy('v2-solidity-utils/MockBasicAuthorizer', { from: admin });
 
-    const rwaRegistry = await deploy('RwaRegistry');
+    const rwaRegistry = await deploy('RwaRegistry', { args: [actualAuthorizer.address] });
     vault = await deploy('Vault', { args: [actualAuthorizer.address, ZERO_ADDRESS, rwaRegistry.address, 0, 0] });
 
     authorizerAdaptor = await deploy('v2-liquidity-mining/AuthorizerAdaptor', {

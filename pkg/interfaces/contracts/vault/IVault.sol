@@ -89,23 +89,23 @@ interface IVault is ISignaturesValidator, ITemporarilyPausable, IAuthentication 
     /**
      * @dev Returns true if `user` has approved `relayer` to act as a relayer for them.
      */
-    function hasApprovedRelayer(address user, address relayer) external view returns (bool);
+    // function hasApprovedRelayer(address user, address relayer) external view returns (bool);
 
-    /**
-     * @dev Allows `relayer` to act as a relayer for `sender` if `approved` is true, and disallows it otherwise.
-     *
-     * Emits a `RelayerApprovalChanged` event.
-     */
-    function setRelayerApproval(
-        address sender,
-        address relayer,
-        bool approved
-    ) external;
+    // /**
+    //  * @dev Allows `relayer` to act as a relayer for `sender` if `approved` is true, and disallows it otherwise.
+    //  *
+    //  * Emits a `RelayerApprovalChanged` event.
+    //  */
+    // function setRelayerApproval(
+    //     address sender,
+    //     address relayer,
+    //     bool approved
+    // ) external;
 
     /**
      * @dev Emitted every time a relayer is approved or disapproved by `setRelayerApproval`.
      */
-    event RelayerApprovalChanged(address indexed relayer, address indexed sender, bool approved);
+    // event RelayerApprovalChanged(address indexed relayer, address indexed sender, bool approved);
 
     // Internal Balance
     //
@@ -693,7 +693,7 @@ interface IVault is ISignaturesValidator, ITemporarilyPausable, IAuthentication 
     /**
      * @dev Emitted for each individual flash loan performed by `flashLoan`.
      */
-    event FlashLoan(IFlashLoanRecipient indexed recipient, IERC20 indexed token, uint256 amount, uint256 feeAmount);
+    // event FlashLoan(IFlashLoanRecipient indexed recipient, IERC20 indexed token, uint256 amount, uint256 feeAmount);
 
     // Asset Management
     //

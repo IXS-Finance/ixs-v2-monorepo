@@ -68,7 +68,7 @@ describe('YearnWrapping', function () {
     await Promise.all(relayerActionIds.map((action) => vault.grantPermissionGlobally(action, relayer)));
 
     // Approve relayer by sender
-    await vault.setRelayerApproval(senderUser, relayer, true);
+    // await vault.setRelayerApproval(senderUser, relayer, true);
   });
 
   describe('primitives', () => {
