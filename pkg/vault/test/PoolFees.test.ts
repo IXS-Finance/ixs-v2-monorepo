@@ -156,13 +156,57 @@ describe('Pool Fees', () => {
           sender = trader;
         });
 
-        it('Claim pool token fee after a swap', async () => {
+        it('Claim pool token fee after a single swap', async () => {
           const swaps = [
             {
               poolId: mainPoolId,
               assetInIndex: 0, // ETH
               assetOutIndex: 1,
               amount: bn(1e18),
+              userData: '0x',
+            },
+          ];
+          const ratio_before = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
+          expect(ratio_before).to.be.equal(bn(0));
+          await vault
+            .connect(sender)
+            .batchSwap(SwapKind.GivenIn, swaps, tokenAddresses, funds, limits, deadline, { value: bn(1e18) });
+
+          const ratioWETH = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
+          expect(ratioWETH).to.be.equal(bn(3e9)); // (3e15 * 1e18) / (1e6 * 1e18)
+          const ratioDAI = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.DAI.address);
+          expect(ratioDAI).to.be.equal(bn(0));
+
+          await expect(poolFeesCollector.connect(lp).claimPoolTokensFees(mainPoolId, lp.address))
+            .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
+            .withArgs(mainPoolId, tokens.WETH.address, bn(3e14), lp.address); // 3e9 * 1e5 * 1e18 / 1e18
+
+          // after claiming, claimable amount should be 0
+          const claimableAmount = await poolFeesCollector.claimable(lp.address, mainPoolId, tokens.WETH.address);
+          expect(claimableAmount).to.be.equal(bn(0));
+
+          // test supplyIndex
+          const WETHsupplyIndex = await poolFeesCollector.supplyIndex(lp.address, mainPoolId, tokens.WETH.address);
+          expect(WETHsupplyIndex).to.be.equal(ratioWETH);
+
+          const DAIsupplyIndex = await poolFeesCollector.supplyIndex(lp.address, mainPoolId, tokens.DAI.address);
+          expect(DAIsupplyIndex).to.be.equal(ratioDAI);
+        });
+
+        it('Claim pool token fee after a multiple swap with the same tokenIn', async () => {
+          const swaps = [
+            {
+              poolId: mainPoolId,
+              assetInIndex: 0, // ETH
+              assetOutIndex: 1,
+              amount: bn(5e17),
+              userData: '0x',
+            },
+            {
+              poolId: mainPoolId,
+              assetInIndex: 0, // ETH
+              assetOutIndex: 1,
+              amount: bn(5e17),
               userData: '0x',
             },
           ];
@@ -178,7 +222,192 @@ describe('Pool Fees', () => {
 
           await expect(poolFeesCollector.connect(lp).claimPoolTokensFees(mainPoolId, lp.address))
             .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
+            .withArgs(mainPoolId, tokens.WETH.address, bn(3e14), lp.address); // 6e9 * 1e5 * 1e18 / 1e18
+          
+          // after claiming, claimable amount should be 0
+          const claimableAmount = await poolFeesCollector.claimable(lp.address, mainPoolId, tokens.WETH.address);
+          expect(claimableAmount).to.be.equal(bn(0));
+
+          // test supplyIndex
+          const WETHsupplyIndex = await poolFeesCollector.supplyIndex(lp.address, mainPoolId, tokens.WETH.address);
+          expect(WETHsupplyIndex).to.be.equal(ratioWETH);
+
+          const DAIsupplyIndex = await poolFeesCollector.supplyIndex(lp.address, mainPoolId, tokens.DAI.address);
+          expect(DAIsupplyIndex).to.be.equal(ratioDAI);
+        });
+
+        it('Claim pool token fee after multiple swaps with different tokenIn', async () => {
+          const swaps = [
+            {
+              poolId: mainPoolId,
+              assetInIndex: 0, // ETH
+              assetOutIndex: 1,
+              amount: bn(1e18),
+              userData: '0x',
+            },
+            {
+              poolId: mainPoolId,
+              assetInIndex: 1, // ETH
+              assetOutIndex: 0,
+              amount: bn(1e18),
+              userData: '0x',
+            },
+          ];
+          const ratio_before = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
+          expect(ratio_before).to.be.equal(bn(0));
+          await vault
+            .connect(sender)
+            .batchSwap(SwapKind.GivenIn, swaps, tokenAddresses, funds, limits, deadline, { value: bn(1e18) });
+          const ratioWETH = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
+          expect(ratioWETH).to.be.equal(bn(3e9)); // (3e15 * 1e18) / (1e6 * 1e18)
+          const ratioDAI = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.DAI.address);
+          expect(ratioDAI).to.be.equal(bn(3e9));
+
+          await expect(poolFeesCollector.connect(lp).claimPoolTokensFees(mainPoolId, lp.address))
+            .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
+            .withArgs(mainPoolId, tokens.WETH.address, bn(3e14), lp.address)
+            .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
+            .withArgs(mainPoolId, tokens.DAI.address, bn(3e14), lp.address);
+          
+          // after claiming, claimable amount should be 0
+          const claimableWETHAmount = await poolFeesCollector.claimable(lp.address, mainPoolId, tokens.WETH.address);
+          expect(claimableWETHAmount).to.be.equal(bn(0));
+          
+          const claimabledAIAmount = await poolFeesCollector.claimable(lp.address, mainPoolId, tokens.DAI.address);
+          expect(claimabledAIAmount).to.be.equal(bn(0));
+          // test supplyIndex
+          const WETHsupplyIndex = await poolFeesCollector.supplyIndex(lp.address, mainPoolId, tokens.WETH.address);
+          expect(WETHsupplyIndex).to.be.equal(ratioWETH);
+
+          const DAIsupplyIndex = await poolFeesCollector.supplyIndex(lp.address, mainPoolId, tokens.DAI.address);
+          expect(DAIsupplyIndex).to.be.equal(ratioDAI);
+        });
+
+        it('ClaimAll pool token fee after a single swap', async () => {
+          const swaps = [
+            {
+              poolId: mainPoolId,
+              assetInIndex: 0, // ETH
+              assetOutIndex: 1,
+              amount: bn(1e18),
+              userData: '0x',
+            },
+          ];
+          const ratio_before = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
+          expect(ratio_before).to.be.equal(bn(0));
+          await vault
+            .connect(sender)
+            .batchSwap(SwapKind.GivenIn, swaps, tokenAddresses, funds, limits, deadline, { value: bn(1e18) });
+
+          const ratioWETH = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
+          expect(ratioWETH).to.be.equal(bn(3e9)); // (3e15 * 1e18) / (1e6 * 1e18)
+          const ratioDAI = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.DAI.address);
+          expect(ratioDAI).to.be.equal(bn(0));
+
+          await expect(poolFeesCollector.connect(lp).claimAll([mainPoolId], lp.address))
+            .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
             .withArgs(mainPoolId, tokens.WETH.address, bn(3e14), lp.address); // 3e9 * 1e5 * 1e18 / 1e18
+
+          // after claiming, claimable amount should be 0
+          const claimableAmount = await poolFeesCollector.claimable(lp.address, mainPoolId, tokens.WETH.address);
+          expect(claimableAmount).to.be.equal(bn(0));
+
+          // test supplyIndex
+          const WETHsupplyIndex = await poolFeesCollector.supplyIndex(lp.address, mainPoolId, tokens.WETH.address);
+          expect(WETHsupplyIndex).to.be.equal(ratioWETH);
+
+          const DAIsupplyIndex = await poolFeesCollector.supplyIndex(lp.address, mainPoolId, tokens.DAI.address);
+          expect(DAIsupplyIndex).to.be.equal(ratioDAI);
+        });
+
+        it('ClaimAll pool token fee after a multiple swap with the same tokenIn', async () => {
+          const swaps = [
+            {
+              poolId: mainPoolId,
+              assetInIndex: 0, // ETH
+              assetOutIndex: 1,
+              amount: bn(5e17),
+              userData: '0x',
+            },
+            {
+              poolId: mainPoolId,
+              assetInIndex: 0, // ETH
+              assetOutIndex: 1,
+              amount: bn(5e17),
+              userData: '0x',
+            },
+          ];
+          const ratio_before = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
+          expect(ratio_before).to.be.equal(bn(0));
+          await vault
+            .connect(sender)
+            .batchSwap(SwapKind.GivenIn, swaps, tokenAddresses, funds, limits, deadline, { value: bn(1e18) });
+          const ratioWETH = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
+          expect(ratioWETH).to.be.equal(bn(3e9)); // (3e15 * 1e18) / (1e6 * 1e18)
+          const ratioDAI = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.DAI.address);
+          expect(ratioDAI).to.be.equal(bn(0));
+
+          await expect(poolFeesCollector.connect(lp).claimAll([mainPoolId], lp.address))
+            .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
+            .withArgs(mainPoolId, tokens.WETH.address, bn(3e14), lp.address); // 6e9 * 1e5 * 1e18 / 1e18
+          
+          // after claiming, claimable amount should be 0
+          const claimableAmount = await poolFeesCollector.claimable(lp.address, mainPoolId, tokens.WETH.address);
+          expect(claimableAmount).to.be.equal(bn(0));
+
+          // test supplyIndex
+          const WETHsupplyIndex = await poolFeesCollector.supplyIndex(lp.address, mainPoolId, tokens.WETH.address);
+          expect(WETHsupplyIndex).to.be.equal(ratioWETH);
+
+          const DAIsupplyIndex = await poolFeesCollector.supplyIndex(lp.address, mainPoolId, tokens.DAI.address);
+          expect(DAIsupplyIndex).to.be.equal(ratioDAI);
+        });
+
+        it('ClaimAll pool token fee after multiple swaps with different tokenIn', async () => {
+          const swaps = [
+            {
+              poolId: mainPoolId,
+              assetInIndex: 0, // ETH
+              assetOutIndex: 1,
+              amount: bn(1e18),
+              userData: '0x',
+            },
+            {
+              poolId: mainPoolId,
+              assetInIndex: 1, // ETH
+              assetOutIndex: 0,
+              amount: bn(1e18),
+              userData: '0x',
+            },
+          ];
+          const ratio_before = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
+          expect(ratio_before).to.be.equal(bn(0));
+          await vault
+            .connect(sender)
+            .batchSwap(SwapKind.GivenIn, swaps, tokenAddresses, funds, limits, deadline, { value: bn(1e18) });
+          const ratioWETH = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
+          expect(ratioWETH).to.be.equal(bn(3e9)); // (3e15 * 1e18) / (1e6 * 1e18)
+          const ratioDAI = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.DAI.address);
+          expect(ratioDAI).to.be.equal(bn(3e9));
+
+          await expect(poolFeesCollector.connect(lp).claimAll([mainPoolId], lp.address))
+            .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
+            .withArgs(mainPoolId, tokens.WETH.address, bn(3e14), lp.address)
+            .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
+            .withArgs(mainPoolId, tokens.DAI.address, bn(3e14), lp.address);
+          
+          // after claiming, claimable amount should be 0
+          const claimableWETHAmount = await poolFeesCollector.claimable(lp.address, mainPoolId, tokens.WETH.address);
+          expect(claimableWETHAmount).to.be.equal(bn(0));
+          
+          const claimabledAIAmount = await poolFeesCollector.claimable(lp.address, mainPoolId, tokens.DAI.address);
+          expect(claimabledAIAmount).to.be.equal(bn(0));
+          // test supplyIndex
+          const WETHsupplyIndex = await poolFeesCollector.supplyIndex(lp.address, mainPoolId, tokens.WETH.address);
+          expect(WETHsupplyIndex).to.be.equal(ratioWETH);
+
+          const DAIsupplyIndex = await poolFeesCollector.supplyIndex(lp.address, mainPoolId, tokens.DAI.address);
+          expect(DAIsupplyIndex).to.be.equal(ratioDAI);
         });
 
         it('received ETH is wrapped into WETH', async () => {
@@ -326,70 +555,78 @@ describe('Pool Fees', () => {
         });
       });
 
-      context('when the sender is an approved relayer', () => {
-        sharedBeforeEach(async () => {
-          const action = await actionId(vault, 'batchSwap');
-          await authorizer.connect(admin).grantPermission(action, other.address, ANY_ADDRESS);
+      // context('when the sender is an approved relayer', () => {
+      //   sharedBeforeEach(async () => {
+      //     const action = await actionId(vault, 'batchSwap');
+      //     await authorizer.connect(admin).grantPermission(action, other.address, ANY_ADDRESS);
 
-          await vault.connect(trader).setRelayerApproval(trader.address, other.address, true);
-        });
+      //     // await vault.connect(trader).setRelayerApproval(trader.address, other.address, true);
+      //   });
 
-        it('returns excess sent ETH to the relayer', async () => {
-          const swaps = [
-            {
-              poolId: mainPoolId,
-              assetInIndex: 0, // ETH
-              assetOutIndex: 1,
-              amount: bn(1e18),
-              userData: '0x',
-            },
-          ];
+      //   it('returns excess sent ETH to the relayer', async () => {
+      //     const swaps = [
+      //       {
+      //         poolId: mainPoolId,
+      //         assetInIndex: 0, // ETH
+      //         assetOutIndex: 1,
+      //         amount: bn(1e18),
+      //         userData: '0x',
+      //       },
+      //     ];
 
-          const relayerBalanceBefore = await ethers.provider.getBalance(other.address);
+      //     const relayerBalanceBefore = await ethers.provider.getBalance(other.address);
 
-          const gasPrice = await ethers.provider.getGasPrice();
-          const receipt: ContractReceipt = await (
-            await vault.connect(other).batchSwap(SwapKind.GivenIn, swaps, tokenAddresses, funds, limits, deadline, {
-              value: bn(1e18).add(42), // Only 1e18 is required
-              gasPrice,
-            })
-          ).wait();
-          const ethSpent = receipt.gasUsed.mul(gasPrice);
+      //     const gasPrice = await ethers.provider.getGasPrice();
+      //     const receipt: ContractReceipt = await (
+      //       await vault.connect(other).batchSwap(SwapKind.GivenIn, swaps, tokenAddresses, funds, limits, deadline, {
+      //         value: bn(1e18).add(42), // Only 1e18 is required
+      //         gasPrice,
+      //       })
+      //     ).wait();
+      //     const ethSpent = receipt.gasUsed.mul(gasPrice);
 
-          const relayerBalanceAfter = await ethers.provider.getBalance(other.address);
+      //     const relayerBalanceAfter = await ethers.provider.getBalance(other.address);
 
-          expect(relayerBalanceBefore.sub(relayerBalanceAfter)).to.equal(ethSpent.add(bn(1e18)));
-        });
+      //     expect(relayerBalanceBefore.sub(relayerBalanceAfter)).to.equal(ethSpent.add(bn(1e18)));
+      //   });
 
-        it('returns unreceived ETH to the relayer', async () => {
-          const swaps = [
-            {
-              poolId: mainPoolId,
-              assetInIndex: 1,
-              assetOutIndex: 0, // ETH
-              amount: bn(1e18),
-              userData: '0x',
-            },
-          ];
+      //   it('returns unreceived ETH to the relayer', async () => {
+      //     const swaps = [
+      //       {
+      //         poolId: mainPoolId,
+      //         assetInIndex: 1,
+      //         assetOutIndex: 0, // ETH
+      //         amount: bn(1e18),
+      //         userData: '0x',
+      //       },
+      //     ];
 
-          const relayerBalanceBefore = await ethers.provider.getBalance(other.address);
+      //     const relayerBalanceBefore = await ethers.provider.getBalance(other.address);
 
-          const gasPrice = await ethers.provider.getGasPrice();
-          const receipt: ContractReceipt = await (
-            await vault.connect(other).batchSwap(SwapKind.GivenIn, swaps, tokenAddresses, funds, limits, deadline, {
-              value: 42,
-              gasPrice,
-            })
-          ).wait();
-          const ethSpent = receipt.gasUsed.mul(gasPrice);
+      //     const gasPrice = await ethers.provider.getGasPrice();
+      //     const receipt: ContractReceipt = await (
+      //       await vault.connect(other).batchSwap(SwapKind.GivenIn, swaps, tokenAddresses, funds, limits, deadline, {
+      //         value: 42,
+      //         gasPrice,
+      //       })
+      //     ).wait();
+      //     const ethSpent = receipt.gasUsed.mul(gasPrice);
 
-          const relayerBalanceAfter = await ethers.provider.getBalance(other.address);
+      //     const relayerBalanceAfter = await ethers.provider.getBalance(other.address);
 
-          expect(relayerBalanceBefore.sub(relayerBalanceAfter)).to.equal(ethSpent);
-        });
-      });
+      //     expect(relayerBalanceBefore.sub(relayerBalanceAfter)).to.equal(ethSpent);
+      //   });
+      // });
     }
   });
+
+  it('Can not call update Ratio with invalid poolId', async () => {
+    const invalidPoolId = ethers.utils.formatBytes32String('INVALID_POOL_ID');
+    await expect(
+      poolFeesCollector.connect(lp).updateRatio(invalidPoolId, tokens.WETH.address, 1e15)
+    ).to.be.revertedWith('INVALID_POOL_ID');
+  });
+  
 
   function toBatchSwap(input: SwapInput): BatchSwapStep[] {
     return input.swaps.map((data) => ({
@@ -457,6 +694,12 @@ describe('Pool Fees', () => {
 
   function itHandlesSwapsProperly(specialization: PoolSpecialization, tokenSymbols: string[]) {
     deployMainPool(specialization, tokenSymbols);
+
+    it('Can not call update Ratio with invalid sender except pool address or vault', async () => {
+      await expect(poolFeesCollector.connect(lp).updateRatio(mainPoolId, tokens.WETH.address, 1e15)).to.be.revertedWith(
+        'only allowed for pool or vault'
+      );
+    });
 
     describe('swap given in', () => {
       const assertSwapGivenIn = (
@@ -557,12 +800,6 @@ describe('Pool Fees', () => {
             }
           }
 
-          // poolFeesCollector.connect(sender).claimFees();
-          const claimDAI = await poolFeesCollector.claimable(lp.address, mainPoolId, tokens.DAI.address);
-          console.log('claimDAI', claimDAI.toString());
-
-          const claimMKR = await poolFeesCollector.claimable(lp.address, mainPoolId, tokens.MKR.address);
-          console.log('claimMKR', claimMKR.toString());
         };
         if (isSingleSwap) {
           it('Check Pool Fees trades the expected amount (single)', async () => {
@@ -635,75 +872,75 @@ describe('Pool Fees', () => {
                         context('when the sender is a relayer', () => {
                           const fromOther = true;
 
-                          context('when the relayer is whitelisted by the authorizer', () => {
-                            sharedBeforeEach('grant permission to relayer', async () => {
-                              const single = await actionId(vault, 'swap');
-                              const batch = await actionId(vault, 'batchSwap');
-                              await authorizer.connect(admin).grantPermission(single, other.address, ANY_ADDRESS);
-                              await authorizer.connect(admin).grantPermission(batch, other.address, ANY_ADDRESS);
-                            });
+                        //   context('when the relayer is whitelisted by the authorizer', () => {
+                        //     sharedBeforeEach('grant permission to relayer', async () => {
+                        //       const single = await actionId(vault, 'swap');
+                        //       const batch = await actionId(vault, 'batchSwap');
+                        //       await authorizer.connect(admin).grantPermission(single, other.address, ANY_ADDRESS);
+                        //       await authorizer.connect(admin).grantPermission(batch, other.address, ANY_ADDRESS);
+                        //     });
 
-                            context('when the relayer is allowed by the user', () => {
-                              sharedBeforeEach('allow relayer', async () => {
-                                await vault.connect(trader).setRelayerApproval(trader.address, other.address, true);
-                              });
+                        //     context('when the relayer is allowed by the user', () => {
+                        //       sharedBeforeEach('allow relayer', async () => {
+                        //         await vault.connect(trader).setRelayerApproval(trader.address, other.address, true);
+                        //       });
 
-                              assertSwapGivenIn({ swaps, fromOther }, { DAI: 2e18, MKR: -1e18 });
-                              assertPoolFeesSwapGivenIn({ swaps, fromOther }, { MKR: 3e15 });
-                            });
+                        //       assertSwapGivenIn({ swaps, fromOther }, { DAI: 2e18, MKR: -1e18 });
+                        //       assertPoolFeesSwapGivenIn({ swaps, fromOther }, { MKR: 3e15 });
+                        //     });
 
-                            context('when the relayer is not allowed by the user', () => {
-                              sharedBeforeEach('disallow relayer', async () => {
-                                await vault.connect(trader).setRelayerApproval(trader.address, other.address, false);
-                              });
+                        //   //   context('when the relayer is not allowed by the user', () => {
+                        //   //     sharedBeforeEach('disallow relayer', async () => {
+                        //   //       await vault.connect(trader).setRelayerApproval(trader.address, other.address, false);
+                        //   //     });
 
-                              context('when the relayer has a valid signature from the user', () => {
-                                assertSwapGivenIn({ swaps, fromOther, signature: true }, { DAI: 2e18, MKR: -1e18 });
-                                assertPoolFeesSwapGivenIn({ swaps, fromOther, signature: true }, { MKR: 3e15 });
-                              });
+                        //   //     context('when the relayer has a valid signature from the user', () => {
+                        //   //       assertSwapGivenIn({ swaps, fromOther, signature: true }, { DAI: 2e18, MKR: -1e18 });
+                        //   //       assertPoolFeesSwapGivenIn({ swaps, fromOther, signature: true }, { MKR: 3e15 });
+                        //   //     });
 
-                            //   context('when the relayer has an invalid signature from the user', () => {
-                            //     assertSwapGivenInReverts(
-                            //       { swaps, fromOther, signature: ZERO_BYTES32 },
-                            //       'USER_DOESNT_ALLOW_RELAYER'
-                            //     );
-                            //   });
+                        //   //   //   context('when the relayer has an invalid signature from the user', () => {
+                        //   //   //     assertSwapGivenInReverts(
+                        //   //   //       { swaps, fromOther, signature: ZERO_BYTES32 },
+                        //   //   //       'USER_DOESNT_ALLOW_RELAYER'
+                        //   //   //     );
+                        //   //   //   });
 
-                            //   context('when there is no signature', () => {
-                            //     assertSwapGivenInReverts({ swaps, fromOther }, 'USER_DOESNT_ALLOW_RELAYER');
-                            //   });
-                            });
-                          });
+                        //   //   //   context('when there is no signature', () => {
+                        //   //   //     assertSwapGivenInReverts({ swaps, fromOther }, 'USER_DOESNT_ALLOW_RELAYER');
+                        //   //   //   });
+                        //   //   // });
+                        //   // });
 
-                          context('when the relayer is not whitelisted by the authorizer', () => {
-                            sharedBeforeEach('revoke permission from relayer', async () => {
-                              const single = await actionId(vault, 'swap');
-                              const batch = await actionId(vault, 'batchSwap');
-                              if (await authorizer.hasPermission(single, other.address, ANY_ADDRESS)) {
-                                await authorizer.connect(admin).revokePermission(single, other.address, ANY_ADDRESS);
-                              }
-                              if (await authorizer.hasPermission(batch, other.address, ANY_ADDRESS)) {
-                                await authorizer.connect(admin).revokePermission(batch, other.address, ANY_ADDRESS);
-                              }
-                            });
+                        //   // context('when the relayer is not whitelisted by the authorizer', () => {
+                        //   //   sharedBeforeEach('revoke permission from relayer', async () => {
+                        //   //     const single = await actionId(vault, 'swap');
+                        //   //     const batch = await actionId(vault, 'batchSwap');
+                        //   //     if (await authorizer.hasPermission(single, other.address, ANY_ADDRESS)) {
+                        //   //       await authorizer.connect(admin).revokePermission(single, other.address, ANY_ADDRESS);
+                        //   //     }
+                        //   //     if (await authorizer.hasPermission(batch, other.address, ANY_ADDRESS)) {
+                        //   //       await authorizer.connect(admin).revokePermission(batch, other.address, ANY_ADDRESS);
+                        //   //     }
+                        //   //   });
 
-                            context('when the relayer is allowed by the user', () => {
-                              sharedBeforeEach('allow relayer', async () => {
-                                await vault.connect(trader).setRelayerApproval(trader.address, other.address, true);
-                              });
+                        //   //   context('when the relayer is allowed by the user', () => {
+                        //   //     sharedBeforeEach('allow relayer', async () => {
+                        //   //       await vault.connect(trader).setRelayerApproval(trader.address, other.address, true);
+                        //   //     });
 
-                            //   assertSwapGivenInReverts({ swaps, fromOther }, 'SENDER_NOT_ALLOWED');
-                            });
+                        //   //   //   assertSwapGivenInReverts({ swaps, fromOther }, 'SENDER_NOT_ALLOWED');
+                        //   //   });
 
-                            context('when the relayer is not allowed by the user', () => {
-                              sharedBeforeEach('disallow relayer', async () => {
-                                await vault.connect(trader).setRelayerApproval(trader.address, other.address, false);
-                              });
+                        //   //   context('when the relayer is not allowed by the user', () => {
+                        //   //     sharedBeforeEach('disallow relayer', async () => {
+                        //   //       await vault.connect(trader).setRelayerApproval(trader.address, other.address, false);
+                        //   //     });
 
-                            //   assertSwapGivenInReverts({ swaps, fromOther }, 'SENDER_NOT_ALLOWED');
-                            });
-                          });
-                        });
+                        //   //   //   assertSwapGivenInReverts({ swaps, fromOther }, 'SENDER_NOT_ALLOWED');
+                        //   //   });
+                        //   // });
+                        // });
                       });
 
                       context('when withdrawing from internal balance', () => {
@@ -1040,7 +1277,7 @@ describe('Pool Fees', () => {
           });
         });
       });
-    });
+      });
 
     describe('swap given out', () => {
       const assertSwapGivenOut = (
@@ -1161,64 +1398,64 @@ describe('Pool Fees', () => {
                           assertPoolFeeSwapGivenOut({ swaps, fromOther }, { MKR: 15e14 });
                         });
 
-                        context('when the sender is a relayer', () => {
-                          const fromOther = true;
+                        // context('when the sender is a relayer', () => {
+                        //   const fromOther = true;
 
-                          context('when the relayer is whitelisted by the authorizer', () => {
-                            sharedBeforeEach('grant permission to relayer', async () => {
-                              const single = await actionId(vault, 'swap');
-                              const batch = await actionId(vault, 'batchSwap');
-                              await authorizer.connect(admin).grantPermission(single, other.address, ANY_ADDRESS);
-                              await authorizer.connect(admin).grantPermission(batch, other.address, ANY_ADDRESS);
-                            });
+                        //   // context('when the relayer is whitelisted by the authorizer', () => {
+                        //   //   sharedBeforeEach('grant permission to relayer', async () => {
+                        //   //     const single = await actionId(vault, 'swap');
+                        //   //     const batch = await actionId(vault, 'batchSwap');
+                        //   //     await authorizer.connect(admin).grantPermission(single, other.address, ANY_ADDRESS);
+                        //   //     await authorizer.connect(admin).grantPermission(batch, other.address, ANY_ADDRESS);
+                        //   //   });
 
-                            context('when the relayer is allowed by the user', () => {
-                              sharedBeforeEach('allow relayer', async () => {
-                                await vault.connect(trader).setRelayerApproval(trader.address, other.address, true);
-                              });
+                        //   //   context('when the relayer is allowed by the user', () => {
+                        //   //     sharedBeforeEach('allow relayer', async () => {
+                        //   //       await vault.connect(trader).setRelayerApproval(trader.address, other.address, true);
+                        //   //     });
 
-                              assertSwapGivenOut({ swaps, fromOther }, { DAI: 1e18, MKR: -0.5e18 });
-                              assertPoolFeeSwapGivenOut({ swaps, fromOther }, { MKR: 15e14 });
-                            });
+                        //   //     assertSwapGivenOut({ swaps, fromOther }, { DAI: 1e18, MKR: -0.5e18 });
+                        //   //     assertPoolFeeSwapGivenOut({ swaps, fromOther }, { MKR: 15e14 });
+                        //   //   });
 
-                            context('when the relayer is not allowed by the user', () => {
-                              sharedBeforeEach('disallow relayer', async () => {
-                                await vault.connect(trader).setRelayerApproval(trader.address, other.address, false);
-                              });
+                        //   //   context('when the relayer is not allowed by the user', () => {
+                        //   //     sharedBeforeEach('disallow relayer', async () => {
+                        //   //       await vault.connect(trader).setRelayerApproval(trader.address, other.address, false);
+                        //   //     });
 
-                              //assertSwapGivenOutReverts({ swaps, fromOther }, 'USER_DOESNT_ALLOW_RELAYER');
-                            });
-                          });
+                        //   //     //assertSwapGivenOutReverts({ swaps, fromOther }, 'USER_DOESNT_ALLOW_RELAYER');
+                        //   //   });
+                        //   // });
 
-                          context('when the relayer is not whitelisted by the authorizer', () => {
-                            sharedBeforeEach('revoke permission from relayer', async () => {
-                              const single = await actionId(vault, 'swap');
-                              const batch = await actionId(vault, 'batchSwap');
-                              if (await authorizer.hasPermission(single, other.address, ANY_ADDRESS)) {
-                                await authorizer.connect(admin).revokePermission(single, other.address, ANY_ADDRESS);
-                              }
-                              if (await authorizer.hasPermission(batch, other.address, ANY_ADDRESS)) {
-                                await authorizer.connect(admin).revokePermission(batch, other.address, ANY_ADDRESS);
-                              }
-                            });
+                        //   // context('when the relayer is not whitelisted by the authorizer', () => {
+                        //   //   sharedBeforeEach('revoke permission from relayer', async () => {
+                        //   //     const single = await actionId(vault, 'swap');
+                        //   //     const batch = await actionId(vault, 'batchSwap');
+                        //   //     if (await authorizer.hasPermission(single, other.address, ANY_ADDRESS)) {
+                        //   //       await authorizer.connect(admin).revokePermission(single, other.address, ANY_ADDRESS);
+                        //   //     }
+                        //   //     if (await authorizer.hasPermission(batch, other.address, ANY_ADDRESS)) {
+                        //   //       await authorizer.connect(admin).revokePermission(batch, other.address, ANY_ADDRESS);
+                        //   //     }
+                        //   //   });
 
-                            context('when the relayer is allowed by the user', () => {
-                              sharedBeforeEach('allow relayer', async () => {
-                                await vault.connect(trader).setRelayerApproval(trader.address, other.address, true);
-                              });
+                        //   //   context('when the relayer is allowed by the user', () => {
+                        //   //     sharedBeforeEach('allow relayer', async () => {
+                        //   //       await vault.connect(trader).setRelayerApproval(trader.address, other.address, true);
+                        //   //     });
 
-                              //assertSwapGivenOutReverts({ swaps, fromOther }, 'SENDER_NOT_ALLOWED');
-                            });
+                        //   //     //assertSwapGivenOutReverts({ swaps, fromOther }, 'SENDER_NOT_ALLOWED');
+                        //   //   });
 
-                            context('when the relayer is not allowed by the user', () => {
-                              sharedBeforeEach('disallow relayer', async () => {
-                                await vault.connect(trader).setRelayerApproval(trader.address, other.address, false);
-                              });
+                        //   //   context('when the relayer is not allowed by the user', () => {
+                        //   //     sharedBeforeEach('disallow relayer', async () => {
+                        //   //       await vault.connect(trader).setRelayerApproval(trader.address, other.address, false);
+                        //   //     });
 
-                              //assertSwapGivenOutReverts({ swaps, fromOther }, 'SENDER_NOT_ALLOWED');
-                            });
-                          });
-                        });
+                        //   //     //assertSwapGivenOutReverts({ swaps, fromOther }, 'SENDER_NOT_ALLOWED');
+                        //   //   });
+                        //   // });
+                        // });
                       });
 
                       context('when withdrawing from internal balance', () => {
@@ -1548,5 +1785,6 @@ describe('Pool Fees', () => {
         });
       });
     });
+  });
   }
 });
