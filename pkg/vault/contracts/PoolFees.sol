@@ -28,6 +28,7 @@ contract PoolFees is IPoolFees {
     using SafeERC20 for IERC20;
     event UpdateRatio(bytes32 poolId, address token, uint256 feeAmount);
     event ClaimPoolTokenFees(bytes32 poolId, address token, uint256 feeAmount, address recipient);
+    event ClaimBPTFees(bytes32 poolId, address token, uint256 feeAmount, address recipient);
 
     address public vault;
 
@@ -44,7 +45,6 @@ contract PoolFees is IPoolFees {
 
         IERC20[] memory tokens;
         (tokens, , ) = IVault(vault).getPoolTokens(_poolId);
-        claimable[msg.sender][_poolId][address(0)] = 0;
         require(tokens.length > 0, "no tokens in pool");
         for (uint256 i = 0; i < tokens.length; i++) {
             _updateSupplyIndex(msg.sender, _poolId, address(tokens[i]));
@@ -64,14 +64,12 @@ contract PoolFees is IPoolFees {
         IERC20[] memory tokens;
         (tokens, , ) = IVault(vault).getPoolTokens(_poolId);
         
-        // IERC20 BPT = IERC20(_poolAddr);
         _updateSupplyIndex(msg.sender, _poolId, _poolAddr);
         uint256 claimableAmount = claimable[msg.sender][_poolId][_poolAddr];
         if (claimableAmount > 0) {
             claimable[msg.sender][_poolId][_poolAddr] = 0;
-            // BPT.safeTransfer(recipient, claimableAmount);
             _exitPool(_poolId, recipient, _convertERC20ToIAsset(tokens), new uint256[](0), claimableAmount, false);
-
+            emit ClaimBPTFees(_poolId, _poolAddr, claimableAmount, recipient);
         }
     }
 
@@ -87,7 +85,7 @@ contract PoolFees is IPoolFees {
 
         // Encode userData based on exitKind
         bytes memory userData;
-        userData = abi.encode(uint8(1), bptAmount); // EXACT_BPT_IN_FOR_TOKENS_OUT
+        userData = abi.encode(uint8(1), bptAmount); // EXACT_BPT_IN_FOR_TOKENS_OUT kind
 
         IVault.ExitPoolRequest memory request = IVault.ExitPoolRequest({
             assets: assets,
@@ -108,15 +106,12 @@ contract PoolFees is IPoolFees {
         _claimBPTFees(_poolId, recipient);
     }
 
-    function claimAll(bytes32[] calldata _poolId, bool[] calldata tokenTypes, address recipient) external override{
-        require(_poolId.length == tokenTypes.length, "invalid length");
+    function claimAll(bytes32[] calldata _poolIds, address recipient) external override{
+        require(_poolIds.length > 0, "invalid length");
 
-        for (uint256 i = 0; i < _poolId.length; i++) {
-            if (tokenTypes[i]) {
-                _claimPoolTokensFees(_poolId[i], recipient);
-            } else {
-                _claimBPTFees(_poolId[i], recipient);
-            }
+        for (uint256 i = 0; i < _poolIds.length; i++) {
+            _claimPoolTokensFees(_poolIds[i], recipient);
+            _claimBPTFees(_poolIds[i], recipient);
         }
     }
 
