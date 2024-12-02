@@ -285,9 +285,6 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
         // re-calculate swap fee
         uint256 _swapFee = amountIn.mulUp(IProtocolFeesCollector(pool).getSwapFeePercentage());
 
-        //update index ratio
-        // _updates(request.poolId, address(request.tokenIn), _swapFee);
-
         _poolFeesCollector.updateRatio(request.poolId, address(request.tokenIn), _swapFee);
         IERC20(address(request.tokenIn)).safeTransfer(address(IVault(this).getPoolFeesCollector()), _swapFee); // transfer the fees out to PoolFees
 

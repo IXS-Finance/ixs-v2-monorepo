@@ -133,7 +133,6 @@ contract PoolFees is IPoolFees {
 
         IERC20 lpToken = IERC20(_poolAddr);
         uint256 _supplied = lpToken.balanceOf(_recipient); // get LP balance of `recipient`
-        // uint256 _indexRatio = IVault(vault).getIndexRatio(_poolId, address(token)); // get global index for accumulated fees
         uint256 _indexRatio = indexRatio[_poolId][_token]; // get global index for accumulated fees
 
         if (_supplied > 0) {
