@@ -304,7 +304,7 @@ describe('Pool Fees', () => {
           const ratioDAI = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.DAI.address);
           expect(ratioDAI).to.be.equal(bn(0));
 
-          await expect(poolFeesCollector.connect(lp).claimAll([mainPoolId], lp.address))
+          await expect(poolFeesCollector.connect(lp).claimAll(mainPoolId, lp.address))
             .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
             .withArgs(mainPoolId, tokens.WETH.address, bn(3e14), lp.address); // 3e9 * 1e5 * 1e18 / 1e18
 
@@ -347,7 +347,7 @@ describe('Pool Fees', () => {
           const ratioDAI = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.DAI.address);
           expect(ratioDAI).to.be.equal(bn(0));
 
-          await expect(poolFeesCollector.connect(lp).claimAll([mainPoolId], lp.address))
+          await expect(poolFeesCollector.connect(lp).claimAll(mainPoolId, lp.address))
             .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
             .withArgs(mainPoolId, tokens.WETH.address, bn(3e14), lp.address); // 6e9 * 1e5 * 1e18 / 1e18
           
@@ -390,7 +390,7 @@ describe('Pool Fees', () => {
           const ratioDAI = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.DAI.address);
           expect(ratioDAI).to.be.equal(bn(3e9));
 
-          await expect(poolFeesCollector.connect(lp).claimAll([mainPoolId], lp.address))
+          await expect(poolFeesCollector.connect(lp).claimAll(mainPoolId, lp.address))
             .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
             .withArgs(mainPoolId, tokens.WETH.address, bn(3e14), lp.address)
             .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
