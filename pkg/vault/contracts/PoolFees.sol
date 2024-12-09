@@ -40,22 +40,34 @@ contract PoolFees is IPoolFees {
         vault = _vault;
     }
 
-    function _claimPoolTokensFees(bytes32 _poolId, address recipient) internal{
+    function _claimPoolTokensFees(
+        bytes32 _poolId,
+        address recipient
+    )
+        internal
+        returns (address[] memory, uint256[] memory)
+    {
         require(_poolId != bytes32(0), "invalid poolId");
 
         IERC20[] memory tokens;
         (tokens, , ) = IVault(vault).getPoolTokens(_poolId);
         require(tokens.length > 0, "no tokens in pool");
+        address[] memory assets = new address[](tokens.length);
+        uint[] memory claimableAmounts = new uint[](tokens.length);
+
         for (uint256 i = 0; i < tokens.length; i++) {
             _updateSupplyIndex(msg.sender, _poolId, address(tokens[i]));
             IERC20 token = tokens[i];
             uint256 claimableAmount = claimable[msg.sender][_poolId][address(token)];
+            claimableAmounts[i] = claimableAmount;
+            assets[i] = address(token);
             if (claimableAmount > 0) {
                 claimable[msg.sender][_poolId][address(token)] = 0;
                 token.safeTransfer(recipient, claimableAmount);
                 emit ClaimPoolTokenFees(_poolId, address(token), claimableAmount, recipient);
             }
         }
+        return (assets, claimableAmounts);
     }
 
     function _claimBPTFees(bytes32 _poolId, address recipient) internal{
@@ -63,12 +75,13 @@ contract PoolFees is IPoolFees {
         (_poolAddr, ) = IVault(vault).getPool(_poolId);
         IERC20[] memory tokens;
         (tokens, , ) = IVault(vault).getPoolTokens(_poolId);
-        
+
         _updateSupplyIndex(msg.sender, _poolId, _poolAddr);
         uint256 claimableAmount = claimable[msg.sender][_poolId][_poolAddr];
         if (claimableAmount > 0) {
             claimable[msg.sender][_poolId][_poolAddr] = 0;
-            _exitPool(_poolId, recipient, _convertERC20ToIAsset(tokens), new uint256[](0), claimableAmount, false);
+            uint256[] memory amountOuts = new uint256[](tokens.length);
+            _exitPool(_poolId, recipient, _convertERC20ToIAsset(tokens), amountOuts, claimableAmount, false);
             emit ClaimBPTFees(_poolId, _poolAddr, claimableAmount, recipient);
         }
     }
@@ -94,25 +107,28 @@ contract PoolFees is IPoolFees {
             toInternalBalance: toInternalBalance
         });
 
-        // Directly exit the pool and send tokens
-        IVault(vault).exitPool(poolId, msg.sender, payable(recipient), request);
+        // Directly exit the pool and send tokens to recipient
+        IVault(vault).exitPool(poolId, address(this), payable(recipient), request);
     }
 
-    function claimPoolTokensFees(bytes32 _poolId, address recipient) external override{
-        _claimPoolTokensFees(_poolId, recipient);
+    function claimPoolTokensFees(
+        bytes32 _poolId,
+        address recipient
+    )
+        external
+        override
+        returns (address[] memory tokens, uint256[] memory claimableAmounts)
+    {
+       (tokens, claimableAmounts) = _claimPoolTokensFees(_poolId, recipient);
     }
 
     function claimBPTFees(bytes32 _poolId, address recipient) external override{
         _claimBPTFees(_poolId, recipient);
     }
 
-    function claimAll(bytes32[] calldata _poolIds, address recipient) external override{
-        require(_poolIds.length > 0, "invalid length");
-
-        for (uint256 i = 0; i < _poolIds.length; i++) {
-            _claimPoolTokensFees(_poolIds[i], recipient);
-            _claimBPTFees(_poolIds[i], recipient);
-        }
+    function claimAll(bytes32 _poolIds, address recipient) external override{
+        _claimPoolTokensFees(_poolIds, recipient);
+        _claimBPTFees(_poolIds, recipient);
     }
 
     function _convertERC20ToIAsset(IERC20[] memory tokens) internal pure returns (IAsset[] memory) {
