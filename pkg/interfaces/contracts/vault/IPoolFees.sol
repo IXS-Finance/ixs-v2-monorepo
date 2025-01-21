@@ -23,7 +23,7 @@ interface IPoolFees{
     /**
      * @dev Claim fees for all tokens based on poolId to a recipient
      */
-    function claimPoolTokensFees(bytes32 _poolId, address recipient) external;
+    function claimPoolTokensFees(bytes32 _poolId, address recipient) external returns (address[] memory, uint256[] memory);
 
     /**
      * @dev Claim fees for BPT tokens to a recipient
@@ -33,7 +33,7 @@ interface IPoolFees{
     /**
      * @dev Claim fees for all tokens based on poolId and BPT to a recipient
      */
-    function claimAll(bytes32[] calldata _poolId, address recipient) external;
+    function claimAll(bytes32 _poolId, address recipient) external;
     
     /**
      * @dev update ratio of token
