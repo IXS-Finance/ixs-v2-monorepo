@@ -119,7 +119,8 @@ contract WeightedPoolFactory is Authentication, BasePoolFactory, ReentrancyGuard
         _require(canPerform, Errors.INVALID_SIGNATURE);
 
         uint256 tokensLength = params.tokens.length;
-        verifySignature(authorization.operator, params, deadline, authorization);
+        _verifySignature(authorization.operator, params, deadline, authorization);
+        _nextNonce[msg.sender] += 1;
 
         {
             for (uint256 i = 0; i < tokensLength; i++) {
@@ -160,16 +161,25 @@ contract WeightedPoolFactory is Authentication, BasePoolFactory, ReentrancyGuard
     /**
      * @dev Verifies the signature of the pool creation.
      */
-    function verifySignature(
+    function _verifySignature(
         address _account,
         WeightedPoolCreationParams memory params,
         uint256 deadline,
         RwaDataTypes.RwaAuthorizationData calldata authorization
-    ) internal {
+    ) internal view {
         bytes32 structHash = getPoolCreationHash(params, deadline, _nextNonce[msg.sender]);
-        _ensureValidSignature(_account, structHash, _toArraySignature(authorization.v, authorization.r, authorization.s), deadline, Errors.INVALID_SIGNATURE);
+        bytes32 digest = _hashTypedDataV4(structHash);
+        _require(_isValidSignature(_account, digest, _toArraySignature(authorization.v, authorization.r, authorization.s)), Errors.INVALID_SIGNATURE);
+
+        // We could check for the deadline before validating the signature, but this leads to saner error processing (as
+        // we only care about expired deadlines if the signature is correct) and only affects the gas cost of the revert
+        // scenario, which will only occur infrequently, if ever.
+        // The deadline is timestamp-based: it should not be relied upon for sub-minute accuracy.
+        // solhint-disable-next-line not-rely-on-time
+        _require(deadline >= block.timestamp, Errors.EXPIRED_SIGNATURE);
+
     }
-    
+
     function _encode(WeightedPoolCreationParams memory params, uint256 pauseWindowDuration, uint256 bufferPeriodDuration) internal view returns (bytes memory) {
         return abi.encode(
                     WeightedPool.NewPoolParams({
