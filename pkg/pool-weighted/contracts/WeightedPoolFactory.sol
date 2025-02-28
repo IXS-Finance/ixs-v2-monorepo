@@ -22,7 +22,7 @@ import "@balancer-labs/v2-interfaces/contracts/vault/IRwaRegistry.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/IAuthorizer.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/helpers/Authentication.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/ReentrancyGuard.sol";
-import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/EIP712.sol";
+import "@balancer-labs/v2-solidity-utils/contracts/helpers/EOASignaturesValidator.sol";
 
 
 import "./WeightedPool.sol";
@@ -36,21 +36,11 @@ struct WeightedPoolCreationParams {
     address owner;
     bool[] isRWA;
 }
-
-struct SignatureParams {
-    uint8 v;
-    bytes32 r;
-    bytes32 s;
-}
-contract WeightedPoolFactory is Authentication, BasePoolFactory, ReentrancyGuard, EIP712{
-    IRwaRegistry public rwaRegistry;
-
-    // keccak256(
-    //     "CreateRWAPool(string memory name,string memory symbol,address[] memory tokens,uint256[] memory normalizedWeights,IRateProvider[] memory rateProviders,uint256 swapFeePercentage,address owner,bool[] memory isRWA,uint256 deadline,uint256 nonce)");
-    bytes32 private constant RWAPOOL_TYPEHASH = 0x935c5143f85d7e522000603cb9872870f67b2398d6c7c8dde472b19fbfbf417a;    
-    IAuthorizer private _authorizer;
+contract WeightedPoolFactory is Authentication, BasePoolFactory, ReentrancyGuard, EOASignaturesValidator{
+    bytes32 private constant RWAPOOL_TYPEHASH = 0x935c5143f85d7e522000603cb9872870f67b2398d6c7c8dde472b19fbfbf417a;// keccak256("CreateRWAPool(string memory name,string memory symbol,address[] memory tokens,uint256[] memory normalizedWeights,IRateProvider[] memory rateProviders,uint256 swapFeePercentage,address owner,bool[] memory isRWA,uint256 deadline,uint256 nonce)");    
     bytes32 public constant OPERATOR_ROLE = 0x97667070c54ef182b0f5858b034beac1b6f3089aa2d3188bb1e8929f4fa9b929; //keccak256("OPERATOR_ROLE");
-    mapping(address => uint256) internal _nextNonce;
+    IRwaRegistry public rwaRegistry;
+    IAuthorizer private _authorizer;
 
     constructor(
         IVault vault,
@@ -116,14 +106,20 @@ contract WeightedPoolFactory is Authentication, BasePoolFactory, ReentrancyGuard
             );
     }
 
+    /**
+     * @dev Deploys a new `WeightedPool` for RWA tokens.
+     */
     function createRWAPool(
         WeightedPoolCreationParams memory params,
         uint256 deadline,
         bytes32 salt,
-        SignatureParams calldata signature
+        RwaDataTypes.RwaAuthorizationData calldata authorization
     ) external returns (address) {
+        bool canPerform = _authorizer.canPerform(OPERATOR_ROLE, authorization.operator, address(this));
+        _require(canPerform, Errors.INVALID_SIGNATURE);
+
         uint256 tokensLength = params.tokens.length;
-        verifyRwaSwapSignature(params, deadline, signature);
+        verifySignature(authorization.operator, params, deadline, authorization);
 
         {
             for (uint256 i = 0; i < tokensLength; i++) {
@@ -161,77 +157,19 @@ contract WeightedPoolFactory is Authentication, BasePoolFactory, ReentrancyGuard
         );
     }
 
-    function verifyRwaSwapSignature(
+    /**
+     * @dev Verifies the signature of the pool creation.
+     */
+    function verifySignature(
+        address _account,
         WeightedPoolCreationParams memory params,
         uint256 deadline,
-        SignatureParams calldata sig
+        RwaDataTypes.RwaAuthorizationData calldata authorization
     ) internal {
         bytes32 structHash = getPoolCreationHash(params, deadline, _nextNonce[msg.sender]);
-
-        bytes32 digest = _hashTypedDataV4(structHash,  _domainSeparatorV4());
-        _isValidSignature(
-                digest,
-                _toArraySignature(sig.v, sig.r, sig.s)
-            );
-
-        // solhint-disable-next-line not-rely-on-time
-        _require(deadline >= block.timestamp, Errors.EXPIRED_SIGNATURE);
-
-        _nextNonce[msg.sender] += 1;
-    }
-
-    function _isValidSignature(
-        bytes32 digest,
-        bytes memory signature
-    ) internal view returns (address) {
-        _require(signature.length == 65, Errors.MALFORMED_SIGNATURE);
-
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-
-        // ecrecover takes the r, s and v signature parameters, and the only way to get them is to use assembly.
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            r := mload(add(signature, 0x20))
-            s := mload(add(signature, 0x40))
-            v := byte(0, mload(add(signature, 0x60)))
-        }
-
-        address recoveredAddress = ecrecover(digest, v, r, s);
-
-        // ecrecover returns the zero address on recover failure, so we need to handle that explicitly.
-        bool canPerform = _authorizer.canPerform(OPERATOR_ROLE, recoveredAddress, address(this));
-        _require(canPerform, Errors.INVALID_SIGNATURE);
-        _require(recoveredAddress != address(0), Errors.INVALID_SIGNATURE);
-        return recoveredAddress;
-        
-    }
-
-    function _toArraySignature(
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) internal pure returns (bytes memory) {
-        bytes memory signature = new bytes(65);
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            mstore(add(signature, 32), r)
-            mstore(add(signature, 64), s)
-            mstore8(add(signature, 96), v)
-        }
-
-        return signature;
-    }
-
-    function _hashTypedDataV4(bytes32 structHash, bytes32 domainSeparatorV4) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked("\x19\x01", domainSeparatorV4, structHash));
+        _ensureValidSignature(_account, structHash, _toArraySignature(authorization.v, authorization.r, authorization.s), deadline, Errors.INVALID_SIGNATURE);
     }
     
-    function getNextNonceByOperator(address account) public view returns (uint256) {
-        return _nextNonce[account];
-    }
-
     function _encode(WeightedPoolCreationParams memory params, uint256 pauseWindowDuration, uint256 bufferPeriodDuration) internal view returns (bytes memory) {
         return abi.encode(
                     WeightedPool.NewPoolParams({
