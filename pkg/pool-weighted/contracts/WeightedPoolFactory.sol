@@ -47,7 +47,8 @@ contract WeightedPoolFactory is Authentication, BasePoolFactory, ReentrancyGuard
         IProtocolFeePercentagesProvider protocolFeeProvider,
         uint256 initialPauseWindowDuration,
         uint256 bufferPeriodDuration,
-        IAuthorizer authorizer
+        IAuthorizer authorizer,
+        IRwaRegistry _rwaRegistry
     )
         BasePoolFactory(
             vault,
@@ -59,6 +60,7 @@ contract WeightedPoolFactory is Authentication, BasePoolFactory, ReentrancyGuard
     {
         // solhint-disable-previous-line no-empty-blocks
         _authorizer = authorizer;
+        rwaRegistry = _rwaRegistry;
     }
 
     function setAuthorizer(IAuthorizer newAuthorizer) external nonReentrant authenticate {
@@ -116,17 +118,17 @@ contract WeightedPoolFactory is Authentication, BasePoolFactory, ReentrancyGuard
         RwaDataTypes.RwaAuthorizationData calldata authorization
     ) external returns (address) {
         bool canPerform = _authorizer.canPerform(OPERATOR_ROLE, authorization.operator, address(this));
-        _require(canPerform, Errors.INVALID_SIGNATURE);
+        _require(canPerform, Errors.INVALID_OPERATION);
 
         uint256 tokensLength = params.tokens.length;
         _verifySignature(authorization.operator, params, deadline, authorization);
         _nextNonce[msg.sender] += 1;
 
+        require(tokensLength == params.isRWA.length, "isRWA must be the same length as tokens");
         {
             for (uint256 i = 0; i < tokensLength; i++) {
                 require(address(params.tokens[i]) != address(0x0), "Token address cannot be 0x0");
-                require(tokensLength == params.isRWA.length, "isRWA must be the same length as tokens");
-                if (params.isRWA[i] && rwaRegistry.isRwaToken(address(params.tokens[i])) == false) {
+                if (params.isRWA[i] == true && rwaRegistry.isRwaToken(address(params.tokens[i])) == false) {
                     rwaRegistry.addToken(address(params.tokens[i]));
                 }
             }
