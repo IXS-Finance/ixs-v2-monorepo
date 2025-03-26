@@ -128,7 +128,7 @@ contract PoolFees is IPoolFees {
 
     function claimBPTFees(bytes32 _poolId, address recipient) external override {
         address authorizer = address(IVault(vault).getAuthorizer());
-        bytes32 actionId = keccak256(abi.encodePacked(msg.sig));
+        bytes32 actionId = keccak256(abi.encodePacked(address(this), msg.sig));
         require(IAuthorizer(authorizer).canPerform(actionId, msg.sender, address(this)), "only allowed for authorizer");
         _claimBPTFees(_poolId, recipient);
     }
@@ -197,7 +197,7 @@ contract PoolFees is IPoolFees {
     function setVoter(address _voter) external
     {
         address authorizer = address(IVault(vault).getAuthorizer());
-        bytes32 actionId = keccak256(abi.encodePacked(msg.sig));
+        bytes32 actionId = keccak256(abi.encodePacked(address(this), msg.sig));
         require(IAuthorizer(authorizer).canPerform(actionId, msg.sender, address(this)), "only allowed for authorizer");
         voter = _voter;
     }
