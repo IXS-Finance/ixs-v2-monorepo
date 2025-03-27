@@ -33,6 +33,8 @@ export type RawWeightedPoolDeployment = {
   from?: SignerWithAddress;
   vault?: Vault;
   fromFactory?: boolean;
+  authorizer?: string;
+  rwaRegistry?: string;
 };
 
 export type WeightedPoolDeployment = {
@@ -46,6 +48,8 @@ export type WeightedPoolDeployment = {
   owner: Account;
   admin?: SignerWithAddress;
   from?: SignerWithAddress;
+  authorizer: string;
+  rwaRegistry: string;
 };
 
 export type RawLiquidityBootstrappingPoolDeployment = {

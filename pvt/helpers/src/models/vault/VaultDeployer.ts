@@ -38,6 +38,7 @@ export default {
       deployment.maxYieldValue,
       deployment.maxAUMValue
     );
+    const voter = await this._deployMockVoter();
 
     let authorizer;
     if (!params.useBasicAuthorizer) {
@@ -61,7 +62,8 @@ export default {
       rwaRegistry.instance,
       adaptorEntrypoint,
       protocolFeeProvider,
-      admin
+      admin,
+      voter
     );
   },
 
@@ -109,5 +111,9 @@ export default {
     return deploy('v2-standalone-utils/ProtocolFeePercentagesProvider', {
       args: [vault.address, maxYieldValue, maxAUMValue],
     });
+  },
+
+  async _deployMockVoter(from?: SignerWithAddress): Promise<Contract> {
+    return deploy('v2-vault/MockVoter', { args: [], from });
   },
 };
