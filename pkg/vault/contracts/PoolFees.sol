@@ -30,6 +30,7 @@ contract PoolFees is IPoolFees {
     event UpdateRatio(bytes32 poolId, address token, uint256 feeAmount);
     event ClaimPoolTokenFees(bytes32 poolId, address token, uint256 feeAmount, address recipient);
     event ClaimBPTFees(bytes32 poolId, address token, uint256 feeAmount, address recipient);
+    event VoterChanged(address voter);
 
     address public vault;
     address public voter;
@@ -206,6 +207,7 @@ contract PoolFees is IPoolFees {
         bytes32 actionId = keccak256(abi.encodePacked(address(this), msg.sig));
         require(IAuthorizer(authorizer).canPerform(actionId, msg.sender, address(this)), "only allowed for authorizer");
         voter = _voter;
+        emit VoterChanged(_voter);
     }
 
     function pool2Gauge(bytes32 _poolId) internal view returns (address) {
