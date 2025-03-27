@@ -113,6 +113,9 @@ contract PoolFees is IPoolFees {
         IVault(vault).exitPool(poolId, address(this), payable(recipient), request);
     }
 
+    // @dev claim fees for all tokens based on poolId to a recipient, only allowed for gauge
+    // @param _poolId pool id
+    // @param recipient recipient address
     function claimPoolTokensFees(
         bytes32 _poolId,
         address recipient
@@ -126,6 +129,9 @@ contract PoolFees is IPoolFees {
        (tokens, claimableAmounts) = _claimPoolTokensFees(_poolId, recipient);
     }
 
+    // @dev claim fees for BPT tokens to a recipient, only allowed for team
+    // @param _poolId pool id
+    // @param recipient recipient address
     function claimBPTFees(bytes32 _poolId, address recipient) external override {
         address authorizer = address(IVault(vault).getAuthorizer());
         bytes32 actionId = keccak256(abi.encodePacked(address(this), msg.sig));
