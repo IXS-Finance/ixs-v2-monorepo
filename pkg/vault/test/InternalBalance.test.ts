@@ -313,108 +313,108 @@ describe('Internal Balance', () => {
         await tokens.DAI.approve(vault, initialBalance, { from: sender });
       });
 
-      context('when the relayer is whitelisted by the authorizer', () => {
-        sharedBeforeEach('grant permission to relayer', async () => {
-          const action = await actionId(vault, 'manageUserBalance');
-          await authorizer.connect(admin).grantPermission(action, relayer.address, ANY_ADDRESS);
-        });
+      // context('when the relayer is whitelisted by the authorizer', () => {
+      //   sharedBeforeEach('grant permission to relayer', async () => {
+      //     const action = await actionId(vault, 'manageUserBalance');
+      //     await authorizer.connect(admin).grantPermission(action, relayer.address, ANY_ADDRESS);
+      //   });
 
-        context('when the relayer is allowed to deposit by the user', () => {
-          sharedBeforeEach('allow relayer', async () => {
-            await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, true);
-          });
+      //   context('when the relayer is allowed to deposit by the user', () => {
+      //     sharedBeforeEach('allow relayer', async () => {
+      //       await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, true);
+      //     });
 
-          itHandlesDepositsProperly(initialBalance, true);
+      //     itHandlesDepositsProperly(initialBalance, true);
 
-          context('when the asset is ETH', () => {
-            it('returns excess ETH to the relayer', async () => {
-              const amount = bn(100e18);
+      //     context('when the asset is ETH', () => {
+      //       it('returns excess ETH to the relayer', async () => {
+      //         const amount = bn(100e18);
 
-              const relayerBalanceBefore = await ethers.provider.getBalance(relayer.address);
+      //         const relayerBalanceBefore = await ethers.provider.getBalance(relayer.address);
 
-              const gasPrice = await ethers.provider.getGasPrice();
-              const receipt: ContractReceipt = await (
-                await vault.manageUserBalance(
-                  [
-                    {
-                      kind,
-                      asset: ETH_TOKEN_ADDRESS,
-                      amount: amount.sub(42),
-                      sender: sender.address,
-                      recipient: recipient.address,
-                    },
-                  ],
-                  { value: amount, gasPrice }
-                )
-              ).wait();
-              const txETH = receipt.gasUsed.mul(gasPrice);
+      //         const gasPrice = await ethers.provider.getGasPrice();
+      //         const receipt: ContractReceipt = await (
+      //           await vault.manageUserBalance(
+      //             [
+      //               {
+      //                 kind,
+      //                 asset: ETH_TOKEN_ADDRESS,
+      //                 amount: amount.sub(42),
+      //                 sender: sender.address,
+      //                 recipient: recipient.address,
+      //               },
+      //             ],
+      //             { value: amount, gasPrice }
+      //           )
+      //         ).wait();
+      //         const txETH = receipt.gasUsed.mul(gasPrice);
 
-              const relayerBalanceAfter = await ethers.provider.getBalance(relayer.address);
+      //         const relayerBalanceAfter = await ethers.provider.getBalance(relayer.address);
 
-              const ethSpent = txETH.add(amount).sub(42);
-              expect(relayerBalanceBefore.sub(relayerBalanceAfter)).to.equal(ethSpent);
-            });
-          });
-        });
+      //         const ethSpent = txETH.add(amount).sub(42);
+      //         expect(relayerBalanceBefore.sub(relayerBalanceAfter)).to.equal(ethSpent);
+      //       });
+      //     });
+      //   });
 
-        context('when the relayer is not allowed by the user', () => {
-          it('reverts', async () => {
-            await expect(
-              vault.manageUserBalance([
-                {
-                  kind,
-                  asset: tokens.DAI.address,
-                  amount: initialBalance,
-                  sender: sender.address,
-                  recipient: recipient.address,
-                },
-              ])
-            ).to.be.revertedWith('USER_DOESNT_ALLOW_RELAYER');
-          });
-        });
-      });
+      //   context('when the relayer is not allowed by the user', () => {
+      //     it('reverts', async () => {
+      //       await expect(
+      //         vault.manageUserBalance([
+      //           {
+      //             kind,
+      //             asset: tokens.DAI.address,
+      //             amount: initialBalance,
+      //             sender: sender.address,
+      //             recipient: recipient.address,
+      //           },
+      //         ])
+      //       ).to.be.revertedWith('USER_DOESNT_ALLOW_RELAYER');
+      //     });
+      //   });
+      // });
 
-      context('when the relayer is not whitelisted by the authorizer', () => {
-        context('when the relayer is allowed by the user', () => {
-          sharedBeforeEach('allow relayer', async () => {
-            await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, true);
-          });
+      // context('when the relayer is not whitelisted by the authorizer', () => {
+      //   context('when the relayer is allowed by the user', () => {
+      //     sharedBeforeEach('allow relayer', async () => {
+      //       await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, true);
+      //     });
 
-          it('reverts', async () => {
-            await expect(
-              vault.manageUserBalance([
-                {
-                  kind,
-                  asset: tokens.DAI.address,
-                  amount: initialBalance,
-                  sender: sender.address,
-                  recipient: recipient.address,
-                },
-              ])
-            ).to.be.revertedWith('SENDER_NOT_ALLOWED');
-          });
-        });
+      //     it('reverts', async () => {
+      //       await expect(
+      //         vault.manageUserBalance([
+      //           {
+      //             kind,
+      //             asset: tokens.DAI.address,
+      //             amount: initialBalance,
+      //             sender: sender.address,
+      //             recipient: recipient.address,
+      //           },
+      //         ])
+      //       ).to.be.revertedWith('SENDER_NOT_ALLOWED');
+      //     });
+      //   });
 
-        context('when the relayer is not allowed by the user', () => {
-          sharedBeforeEach('disallow relayer', async () => {
-            await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, false);
-          });
+      //   context('when the relayer is not allowed by the user', () => {
+      //     sharedBeforeEach('disallow relayer', async () => {
+      //       await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, false);
+      //     });
 
-          it('reverts', async () => {
-            await expect(
-              vault.manageUserBalance([
-                {
-                  kind,
-                  asset: tokens.DAI.address,
-                  amount: initialBalance,
-                  sender: sender.address,
-                  recipient: recipient.address,
-                },
-              ])
-            ).to.be.revertedWith('SENDER_NOT_ALLOWED');
-          });
-        });
-      });
+      //     it('reverts', async () => {
+      //       await expect(
+      //         vault.manageUserBalance([
+      //           {
+      //             kind,
+      //             asset: tokens.DAI.address,
+      //             amount: initialBalance,
+      //             sender: sender.address,
+      //             recipient: recipient.address,
+      //           },
+      //         ])
+      //       ).to.be.revertedWith('SENDER_NOT_ALLOWED');
+      //     });
+      //   });
+      // });
     });
   });
 
@@ -660,72 +660,72 @@ describe('Internal Balance', () => {
           await authorizer.connect(admin).grantPermission(action, relayer.address, ANY_ADDRESS);
         });
 
-        context('when the relayer is allowed by the user', () => {
-          sharedBeforeEach('allow relayer', async () => {
-            await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, true);
-          });
+        // context('when the relayer is allowed by the user', () => {
+        //   sharedBeforeEach('allow relayer', async () => {
+        //     await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, true);
+        //   });
 
-          itHandlesWithdrawalsProperly(depositedAmount, depositedAmount);
-        });
+        //   itHandlesWithdrawalsProperly(depositedAmount, depositedAmount);
+        // });
 
-        context('when the relayer is not allowed by the user', () => {
-          it('reverts', async () => {
-            await expect(
-              vault.manageUserBalance([
-                {
-                  kind,
-                  asset: tokens.DAI.address,
-                  amount: depositedAmount,
-                  sender: sender.address,
-                  recipient: recipient.address,
-                },
-              ])
-            ).to.be.revertedWith('USER_DOESNT_ALLOW_RELAYER');
-          });
-        });
+        // context('when the relayer is not allowed by the user', () => {
+        //   it('reverts', async () => {
+        //     await expect(
+        //       vault.manageUserBalance([
+        //         {
+        //           kind,
+        //           asset: tokens.DAI.address,
+        //           amount: depositedAmount,
+        //           sender: sender.address,
+        //           recipient: recipient.address,
+        //         },
+        //       ])
+        //     ).to.be.revertedWith('USER_DOESNT_ALLOW_RELAYER');
+        //   });
+        // });
       });
 
-      context('when the relayer is not whitelisted by the authorizer', () => {
-        context('when the relayer is allowed by the user', () => {
-          sharedBeforeEach('allow relayer', async () => {
-            await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, true);
-          });
+      // context('when the relayer is not whitelisted by the authorizer', () => {
+      //   context('when the relayer is allowed by the user', () => {
+      //     sharedBeforeEach('allow relayer', async () => {
+      //       await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, true);
+      //     });
 
-          it('reverts', async () => {
-            await expect(
-              vault.manageUserBalance([
-                {
-                  kind,
-                  asset: tokens.DAI.address,
-                  amount: depositedAmount,
-                  sender: sender.address,
-                  recipient: recipient.address,
-                },
-              ])
-            ).to.be.revertedWith('SENDER_NOT_ALLOWED');
-          });
-        });
+      //     it('reverts', async () => {
+      //       await expect(
+      //         vault.manageUserBalance([
+      //           {
+      //             kind,
+      //             asset: tokens.DAI.address,
+      //             amount: depositedAmount,
+      //             sender: sender.address,
+      //             recipient: recipient.address,
+      //           },
+      //         ])
+      //       ).to.be.revertedWith('SENDER_NOT_ALLOWED');
+      //     });
+      //   });
 
-        context('when the relayer is not allowed by the user', () => {
-          sharedBeforeEach('disallow relayer', async () => {
-            await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, false);
-          });
+      //   context('when the relayer is not allowed by the user', () => {
+      //     sharedBeforeEach('disallow relayer', async () => {
+      //       await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, false);
+      //     });
 
-          it('reverts', async () => {
-            await expect(
-              vault.manageUserBalance([
-                {
-                  kind,
-                  asset: tokens.DAI.address,
-                  amount: depositedAmount,
-                  sender: sender.address,
-                  recipient: recipient.address,
-                },
-              ])
-            ).to.be.revertedWith('SENDER_NOT_ALLOWED');
-          });
-        });
-      });
+      //     it('reverts', async () => {
+      //       await expect(
+      //         vault.manageUserBalance([
+      //           {
+      //             kind,
+      //             asset: tokens.DAI.address,
+      //             amount: depositedAmount,
+      //             sender: sender.address,
+      //             recipient: recipient.address,
+      //           },
+      //         ])
+      //       ).to.be.revertedWith('SENDER_NOT_ALLOWED');
+      //     });
+      //   });
+      // });
     });
   });
 
@@ -973,72 +973,72 @@ describe('Internal Balance', () => {
           await authorizer.connect(admin).grantPermission(action, relayer.address, ANY_ADDRESS);
         });
 
-        context('when the relayer is allowed by the user', () => {
-          sharedBeforeEach('allow relayer', async () => {
-            await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, true);
-          });
+        // context('when the relayer is allowed by the user', () => {
+        //   sharedBeforeEach('allow relayer', async () => {
+        //     await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, true);
+        //   });
 
-          itHandlesTransfersProperly(transferredAmounts, transferredAmounts);
-        });
+        //   itHandlesTransfersProperly(transferredAmounts, transferredAmounts);
+        // });
 
-        context('when the relayer is not allowed by the user', () => {
-          it('reverts', async () => {
-            await expect(
-              vault.manageUserBalance(
-                tokens.map((token, i) => ({
-                  kind,
-                  asset: token.address,
-                  amount: amounts[i],
-                  sender: sender.address,
-                  recipient: recipient.address,
-                }))
-              )
-            ).to.be.revertedWith('USER_DOESNT_ALLOW_RELAYER');
-          });
-        });
+        // context('when the relayer is not allowed by the user', () => {
+        //   it('reverts', async () => {
+        //     await expect(
+        //       vault.manageUserBalance(
+        //         tokens.map((token, i) => ({
+        //           kind,
+        //           asset: token.address,
+        //           amount: amounts[i],
+        //           sender: sender.address,
+        //           recipient: recipient.address,
+        //         }))
+        //       )
+        //     ).to.be.revertedWith('USER_DOESNT_ALLOW_RELAYER');
+        //   });
+        // });
       });
 
-      context('when the relayer is not whitelisted by the authorizer', () => {
-        context('when the relayer is allowed by the user', () => {
-          sharedBeforeEach('allow relayer', async () => {
-            await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, true);
-          });
+      // context('when the relayer is not whitelisted by the authorizer', () => {
+      //   context('when the relayer is allowed by the user', () => {
+      //     sharedBeforeEach('allow relayer', async () => {
+      //       await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, true);
+      //     });
 
-          it('reverts', async () => {
-            await expect(
-              vault.manageUserBalance(
-                tokens.map((token, i) => ({
-                  kind,
-                  asset: token.address,
-                  amount: amounts[i],
-                  sender: sender.address,
-                  recipient: recipient.address,
-                }))
-              )
-            ).to.be.revertedWith('SENDER_NOT_ALLOWED');
-          });
-        });
+      //     it('reverts', async () => {
+      //       await expect(
+      //         vault.manageUserBalance(
+      //           tokens.map((token, i) => ({
+      //             kind,
+      //             asset: token.address,
+      //             amount: amounts[i],
+      //             sender: sender.address,
+      //             recipient: recipient.address,
+      //           }))
+      //         )
+      //       ).to.be.revertedWith('SENDER_NOT_ALLOWED');
+      //     });
+      //   });
 
-        context('when the relayer is not allowed by the user', () => {
-          sharedBeforeEach('disallow relayer', async () => {
-            await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, false);
-          });
+      //   // context('when the relayer is not allowed by the user', () => {
+      //   //   // sharedBeforeEach('disallow relayer', async () => {
+      //   //   //   await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, false);
+      //   //   // });
 
-          it('reverts', async () => {
-            await expect(
-              vault.manageUserBalance(
-                tokens.map((token, i) => ({
-                  kind,
-                  asset: token.address,
-                  amount: amounts[i],
-                  sender: sender.address,
-                  recipient: recipient.address,
-                }))
-              )
-            ).to.be.revertedWith('SENDER_NOT_ALLOWED');
-          });
-        });
-      });
+      //   //   it('reverts', async () => {
+      //   //     await expect(
+      //   //       vault.manageUserBalance(
+      //   //         tokens.map((token, i) => ({
+      //   //           kind,
+      //   //           asset: token.address,
+      //   //           amount: amounts[i],
+      //   //           sender: sender.address,
+      //   //           recipient: recipient.address,
+      //   //         }))
+      //   //       )
+      //   //     ).to.be.revertedWith('SENDER_NOT_ALLOWED');
+      //   //   });
+      //   // });
+      // });
     });
   });
 
@@ -1181,72 +1181,72 @@ describe('Internal Balance', () => {
           await authorizer.connect(admin).grantPermission(action, relayer.address, ANY_ADDRESS);
         });
 
-        context('when the relayer is allowed to transfer by the user', () => {
-          sharedBeforeEach('allow relayer', async () => {
-            await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, true);
-          });
+        // context('when the relayer is allowed to transfer by the user', () => {
+        //   sharedBeforeEach('allow relayer', async () => {
+        //     await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, true);
+        //   });
 
-          itHandlesExternalTransfersProperly(balance);
-        });
+        //   itHandlesExternalTransfersProperly(balance);
+        // });
 
-        context('when the relayer is not allowed by the user', () => {
-          it('reverts', async () => {
-            await expect(
-              vault.manageUserBalance([
-                {
-                  kind,
-                  asset: tokens.DAI.address,
-                  amount: balance,
-                  sender: sender.address,
-                  recipient: recipient.address,
-                },
-              ])
-            ).to.be.revertedWith('USER_DOESNT_ALLOW_RELAYER');
-          });
-        });
+        // context('when the relayer is not allowed by the user', () => {
+        //   it('reverts', async () => {
+        //     await expect(
+        //       vault.manageUserBalance([
+        //         {
+        //           kind,
+        //           asset: tokens.DAI.address,
+        //           amount: balance,
+        //           sender: sender.address,
+        //           recipient: recipient.address,
+        //         },
+        //       ])
+        //     ).to.be.revertedWith('USER_DOESNT_ALLOW_RELAYER');
+        //   });
+        // });
       });
 
-      context('when the relayer is not whitelisted by the authorizer', () => {
-        context('when the relayer is allowed by the user', () => {
-          sharedBeforeEach('allow relayer', async () => {
-            await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, true);
-          });
+      // context('when the relayer is not whitelisted by the authorizer', () => {
+      //   context('when the relayer is allowed by the user', () => {
+      //     sharedBeforeEach('allow relayer', async () => {
+      //       await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, true);
+      //     });
 
-          it('reverts', async () => {
-            await expect(
-              vault.manageUserBalance([
-                {
-                  kind,
-                  asset: tokens.DAI.address,
-                  amount: balance,
-                  sender: sender.address,
-                  recipient: recipient.address,
-                },
-              ])
-            ).to.be.revertedWith('SENDER_NOT_ALLOWED');
-          });
-        });
+      //     it('reverts', async () => {
+      //       await expect(
+      //         vault.manageUserBalance([
+      //           {
+      //             kind,
+      //             asset: tokens.DAI.address,
+      //             amount: balance,
+      //             sender: sender.address,
+      //             recipient: recipient.address,
+      //           },
+      //         ])
+      //       ).to.be.revertedWith('SENDER_NOT_ALLOWED');
+      //     });
+      //   });
 
-        context('when the relayer is not allowed by the user', () => {
-          sharedBeforeEach('disallow relayer', async () => {
-            await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, false);
-          });
+      //   context('when the relayer is not allowed by the user', () => {
+      //     sharedBeforeEach('disallow relayer', async () => {
+      //       await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, false);
+      //     });
 
-          it('reverts', async () => {
-            await expect(
-              vault.manageUserBalance([
-                {
-                  kind,
-                  asset: tokens.DAI.address,
-                  amount: balance,
-                  sender: sender.address,
-                  recipient: recipient.address,
-                },
-              ])
-            ).to.be.revertedWith('SENDER_NOT_ALLOWED');
-          });
-        });
-      });
+      //     it('reverts', async () => {
+      //       await expect(
+      //         vault.manageUserBalance([
+      //           {
+      //             kind,
+      //             asset: tokens.DAI.address,
+      //             amount: balance,
+      //             sender: sender.address,
+      //             recipient: recipient.address,
+      //           },
+      //         ])
+      //       ).to.be.revertedWith('SENDER_NOT_ALLOWED');
+      //     });
+      //   });
+      // });
     });
   });
 
@@ -1277,75 +1277,75 @@ describe('Internal Balance', () => {
     sharedBeforeEach('allow relayer', async () => {
       const action = await actionId(vault, 'manageUserBalance');
       await authorizer.connect(admin).grantPermission(action, relayer.address, ANY_ADDRESS);
-      await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, true);
-      await vault.connect(recipient).setRelayerApproval(recipient.address, relayer.address, true);
+      // await vault.connect(sender).setRelayerApproval(sender.address, relayer.address, true);
+      // await vault.connect(recipient).setRelayerApproval(recipient.address, relayer.address, true);
     });
 
     context('when unpaused', () => {
-      context('when all the senders allowed the relayer', () => {
-        context('when all ops add up', () => {
-          it('succeeds', async () => {
-            const ops = [
-              op(OP_KIND.DEPOSIT_INTERNAL, tokens.DAI, 10, sender, recipient),
-              op(OP_KIND.DEPOSIT_INTERNAL, tokens.MKR, 20, sender, recipient),
-              op(OP_KIND.WITHDRAW_INTERNAL, tokens.DAI, 5, recipient),
-              op(OP_KIND.TRANSFER_INTERNAL, tokens.MKR, 8, recipient, otherRecipient),
-              op(OP_KIND.TRANSFER_INTERNAL, tokens.MKR, 3, recipient, sender),
-              op(OP_KIND.TRANSFER_EXTERNAL, tokens.MKR, 200, sender, otherRecipient),
-              op(OP_KIND.DEPOSIT_INTERNAL, tokens.MKR, 100, sender, sender),
-            ];
+      // context('when all the senders allowed the relayer', () => {
+      //   context('when all ops add up', () => {
+      //     it('succeeds', async () => {
+      //       const ops = [
+      //         op(OP_KIND.DEPOSIT_INTERNAL, tokens.DAI, 10, sender, recipient),
+      //         op(OP_KIND.DEPOSIT_INTERNAL, tokens.MKR, 20, sender, recipient),
+      //         op(OP_KIND.WITHDRAW_INTERNAL, tokens.DAI, 5, recipient),
+      //         op(OP_KIND.TRANSFER_INTERNAL, tokens.MKR, 8, recipient, otherRecipient),
+      //         op(OP_KIND.TRANSFER_INTERNAL, tokens.MKR, 3, recipient, sender),
+      //         op(OP_KIND.TRANSFER_EXTERNAL, tokens.MKR, 200, sender, otherRecipient),
+      //         op(OP_KIND.DEPOSIT_INTERNAL, tokens.MKR, 100, sender, sender),
+      //       ];
 
-            await vault.connect(relayer).manageUserBalance(ops);
+      //       await vault.connect(relayer).manageUserBalance(ops);
 
-            expect((await vault.getInternalBalance(sender.address, [tokens.DAI.address]))[0]).to.equal(0);
-            expect((await vault.getInternalBalance(sender.address, [tokens.MKR.address]))[0]).to.equal(103);
+      //       expect((await vault.getInternalBalance(sender.address, [tokens.DAI.address]))[0]).to.equal(0);
+      //       expect((await vault.getInternalBalance(sender.address, [tokens.MKR.address]))[0]).to.equal(103);
 
-            expect((await vault.getInternalBalance(recipient.address, [tokens.DAI.address]))[0]).to.equal(5);
-            expect((await vault.getInternalBalance(recipient.address, [tokens.MKR.address]))[0]).to.equal(9);
+      //       expect((await vault.getInternalBalance(recipient.address, [tokens.DAI.address]))[0]).to.equal(5);
+      //       expect((await vault.getInternalBalance(recipient.address, [tokens.MKR.address]))[0]).to.equal(9);
 
-            expect((await vault.getInternalBalance(otherRecipient.address, [tokens.DAI.address]))[0]).to.equal(0);
-            expect((await vault.getInternalBalance(otherRecipient.address, [tokens.MKR.address]))[0]).to.equal(8);
+      //       expect((await vault.getInternalBalance(otherRecipient.address, [tokens.DAI.address]))[0]).to.equal(0);
+      //       expect((await vault.getInternalBalance(otherRecipient.address, [tokens.MKR.address]))[0]).to.equal(8);
 
-            expect(await tokens.MKR.balanceOf(otherRecipient)).to.be.equal(200);
-          });
-        });
+      //       expect(await tokens.MKR.balanceOf(otherRecipient)).to.be.equal(200);
+      //     });
+      //   });
 
-        context('when all ops do not add up', () => {
-          it('reverts', async () => {
-            const ops = [
-              op(OP_KIND.DEPOSIT_INTERNAL, tokens.DAI, 10, sender, recipient),
-              op(OP_KIND.DEPOSIT_INTERNAL, tokens.MKR, 20, sender, recipient),
-              op(OP_KIND.WITHDRAW_INTERNAL, tokens.DAI, 5, recipient),
-              op(OP_KIND.TRANSFER_INTERNAL, tokens.MKR, 8, recipient, otherRecipient),
-              op(OP_KIND.TRANSFER_INTERNAL, tokens.MKR, 3, recipient, sender),
-              op(OP_KIND.TRANSFER_EXTERNAL, tokens.MKR, 200, sender, otherRecipient),
-              op(OP_KIND.DEPOSIT_INTERNAL, tokens.MKR, 100, sender, sender),
-              op(OP_KIND.WITHDRAW_INTERNAL, tokens.MKR, 10, recipient),
-            ];
+      //   // context('when all ops do not add up', () => {
+      //   //   it('reverts', async () => {
+      //   //     const ops = [
+      //   //       op(OP_KIND.DEPOSIT_INTERNAL, tokens.DAI, 10, sender, recipient),
+      //   //       op(OP_KIND.DEPOSIT_INTERNAL, tokens.MKR, 20, sender, recipient),
+      //   //       op(OP_KIND.WITHDRAW_INTERNAL, tokens.DAI, 5, recipient),
+      //   //       op(OP_KIND.TRANSFER_INTERNAL, tokens.MKR, 8, recipient, otherRecipient),
+      //   //       op(OP_KIND.TRANSFER_INTERNAL, tokens.MKR, 3, recipient, sender),
+      //   //       op(OP_KIND.TRANSFER_EXTERNAL, tokens.MKR, 200, sender, otherRecipient),
+      //   //       op(OP_KIND.DEPOSIT_INTERNAL, tokens.MKR, 100, sender, sender),
+      //   //       op(OP_KIND.WITHDRAW_INTERNAL, tokens.MKR, 10, recipient),
+      //   //     ];
 
-            await expect(vault.connect(relayer).manageUserBalance(ops)).to.be.revertedWith(
-              'INSUFFICIENT_INTERNAL_BALANCE'
-            );
-          });
-        });
-      });
+      //   //     await expect(vault.connect(relayer).manageUserBalance(ops)).to.be.revertedWith(
+      //   //       'INSUFFICIENT_INTERNAL_BALANCE'
+      //   //     );
+      //   //   });
+      //   // });
+      // });
 
-      context('when one of the senders did not allow the relayer', () => {
-        it('reverts', async () => {
-          const ops = [
-            op(OP_KIND.DEPOSIT_INTERNAL, tokens.DAI, 10, sender, recipient),
-            op(OP_KIND.DEPOSIT_INTERNAL, tokens.MKR, 20, sender, recipient),
-            op(OP_KIND.WITHDRAW_INTERNAL, tokens.DAI, 5, recipient),
-            op(OP_KIND.TRANSFER_INTERNAL, tokens.MKR, 8, recipient, otherRecipient),
-            op(OP_KIND.TRANSFER_INTERNAL, tokens.MKR, 3, recipient, sender),
-            op(OP_KIND.TRANSFER_EXTERNAL, tokens.MKR, 200, sender, otherRecipient),
-            op(OP_KIND.DEPOSIT_INTERNAL, tokens.MKR, 100, sender, sender),
-            op(OP_KIND.WITHDRAW_INTERNAL, tokens.MKR, 1, otherRecipient),
-          ];
+      // context('when one of the senders did not allow the relayer', () => {
+      //   it('reverts', async () => {
+      //     const ops = [
+      //       op(OP_KIND.DEPOSIT_INTERNAL, tokens.DAI, 10, sender, recipient),
+      //       op(OP_KIND.DEPOSIT_INTERNAL, tokens.MKR, 20, sender, recipient),
+      //       op(OP_KIND.WITHDRAW_INTERNAL, tokens.DAI, 5, recipient),
+      //       op(OP_KIND.TRANSFER_INTERNAL, tokens.MKR, 8, recipient, otherRecipient),
+      //       op(OP_KIND.TRANSFER_INTERNAL, tokens.MKR, 3, recipient, sender),
+      //       op(OP_KIND.TRANSFER_EXTERNAL, tokens.MKR, 200, sender, otherRecipient),
+      //       op(OP_KIND.DEPOSIT_INTERNAL, tokens.MKR, 100, sender, sender),
+      //       op(OP_KIND.WITHDRAW_INTERNAL, tokens.MKR, 1, otherRecipient),
+      //     ];
 
-          await expect(vault.connect(relayer).manageUserBalance(ops)).to.be.revertedWith('USER_DOESNT_ALLOW_RELAYER');
-        });
-      });
+      //     await expect(vault.connect(relayer).manageUserBalance(ops)).to.be.revertedWith('USER_DOESNT_ALLOW_RELAYER');
+      //   });
+      // });
     });
 
     context('when paused', () => {
@@ -1368,46 +1368,46 @@ describe('Internal Balance', () => {
         await vault.connect(admin).setPaused(true);
       });
 
-      context('when only withdrawing internal balance', () => {
-        it('succeeds', async () => {
-          const ops = [
-            op(OP_KIND.WITHDRAW_INTERNAL, tokens.DAI, 10, otherRecipient),
-            op(OP_KIND.WITHDRAW_INTERNAL, tokens.MKR, 1, sender),
-            op(OP_KIND.WITHDRAW_INTERNAL, tokens.DAI, 5, recipient),
-            op(OP_KIND.WITHDRAW_INTERNAL, tokens.MKR, 8, recipient),
-            op(OP_KIND.WITHDRAW_INTERNAL, tokens.MKR, 3, recipient),
-            op(OP_KIND.WITHDRAW_INTERNAL, tokens.DAI, 35, otherRecipient),
-          ];
+      // context('when only withdrawing internal balance', () => {
+      //   it('succeeds', async () => {
+      //     const ops = [
+      //       op(OP_KIND.WITHDRAW_INTERNAL, tokens.DAI, 10, otherRecipient),
+      //       op(OP_KIND.WITHDRAW_INTERNAL, tokens.MKR, 1, sender),
+      //       op(OP_KIND.WITHDRAW_INTERNAL, tokens.DAI, 5, recipient),
+      //       op(OP_KIND.WITHDRAW_INTERNAL, tokens.MKR, 8, recipient),
+      //       op(OP_KIND.WITHDRAW_INTERNAL, tokens.MKR, 3, recipient),
+      //       op(OP_KIND.WITHDRAW_INTERNAL, tokens.DAI, 35, otherRecipient),
+      //     ];
 
-          await vault.connect(relayer).manageUserBalance(ops);
+      //     await vault.connect(relayer).manageUserBalance(ops);
 
-          expect((await vault.getInternalBalance(sender.address, [tokens.DAI.address]))[0]).to.equal(0);
-          expect((await vault.getInternalBalance(sender.address, [tokens.MKR.address]))[0]).to.equal(0);
+      //     expect((await vault.getInternalBalance(sender.address, [tokens.DAI.address]))[0]).to.equal(0);
+      //     expect((await vault.getInternalBalance(sender.address, [tokens.MKR.address]))[0]).to.equal(0);
 
-          expect((await vault.getInternalBalance(recipient.address, [tokens.DAI.address]))[0]).to.equal(5);
-          expect((await vault.getInternalBalance(recipient.address, [tokens.MKR.address]))[0]).to.equal(9);
+      //     expect((await vault.getInternalBalance(recipient.address, [tokens.DAI.address]))[0]).to.equal(5);
+      //     expect((await vault.getInternalBalance(recipient.address, [tokens.MKR.address]))[0]).to.equal(9);
 
-          expect((await vault.getInternalBalance(otherRecipient.address, [tokens.DAI.address]))[0]).to.equal(5);
-          expect((await vault.getInternalBalance(otherRecipient.address, [tokens.MKR.address]))[0]).to.equal(0);
-        });
-      });
+      //     expect((await vault.getInternalBalance(otherRecipient.address, [tokens.DAI.address]))[0]).to.equal(5);
+      //     expect((await vault.getInternalBalance(otherRecipient.address, [tokens.MKR.address]))[0]).to.equal(0);
+      //   });
+      // });
 
-      context('when trying to perform multiple ops', () => {
-        it('reverts', async () => {
-          const ops = [
-            op(OP_KIND.DEPOSIT_INTERNAL, tokens.DAI, 10, sender, recipient),
-            op(OP_KIND.DEPOSIT_INTERNAL, tokens.MKR, 20, sender, recipient),
-            op(OP_KIND.WITHDRAW_INTERNAL, tokens.DAI, 5, recipient, recipient),
-            op(OP_KIND.TRANSFER_INTERNAL, tokens.MKR, 8, recipient, otherRecipient),
-            op(OP_KIND.TRANSFER_INTERNAL, tokens.MKR, 3, recipient, sender),
-            op(OP_KIND.TRANSFER_EXTERNAL, tokens.MKR, 200, sender, otherRecipient),
-            op(OP_KIND.DEPOSIT_INTERNAL, tokens.MKR, 100, sender, sender),
-            op(OP_KIND.WITHDRAW_INTERNAL, tokens.MKR, 1, otherRecipient, recipient),
-          ];
+      // context('when trying to perform multiple ops', () => {
+      //   it('reverts', async () => {
+      //     const ops = [
+      //       op(OP_KIND.DEPOSIT_INTERNAL, tokens.DAI, 10, sender, recipient),
+      //       op(OP_KIND.DEPOSIT_INTERNAL, tokens.MKR, 20, sender, recipient),
+      //       op(OP_KIND.WITHDRAW_INTERNAL, tokens.DAI, 5, recipient, recipient),
+      //       op(OP_KIND.TRANSFER_INTERNAL, tokens.MKR, 8, recipient, otherRecipient),
+      //       op(OP_KIND.TRANSFER_INTERNAL, tokens.MKR, 3, recipient, sender),
+      //       op(OP_KIND.TRANSFER_EXTERNAL, tokens.MKR, 200, sender, otherRecipient),
+      //       op(OP_KIND.DEPOSIT_INTERNAL, tokens.MKR, 100, sender, sender),
+      //       op(OP_KIND.WITHDRAW_INTERNAL, tokens.MKR, 1, otherRecipient, recipient),
+      //     ];
 
-          await expect(vault.connect(relayer).manageUserBalance(ops)).to.be.revertedWith('PAUSED');
-        });
-      });
+      //     await expect(vault.connect(relayer).manageUserBalance(ops)).to.be.revertedWith('PAUSED');
+      //   });
+      // });
     });
   });
 });

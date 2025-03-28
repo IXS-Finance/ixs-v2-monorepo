@@ -68,7 +68,7 @@ describe('ReaperWrapping', function () {
     );
 
     // Approve relayer by sender
-    await vault.instance.connect(user).setRelayerApproval(user.address, relayer.address, true);
+    // await vault.instance.connect(user).setRelayerApproval(user.address, relayer.address, true);
   });
 
   function encodeWrap(

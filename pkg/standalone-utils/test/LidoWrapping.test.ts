@@ -70,7 +70,7 @@ describe('LidoWrapping', function () {
     await Promise.all(relayerActionIds.map((action) => vault.grantPermissionGlobally(action, relayer.address)));
 
     // Approve relayer by sender
-    await vault.setRelayerApproval(senderUser, relayer, true);
+    // await vault.setRelayerApproval(senderUser, relayer, true);
   });
 
   function encodeApprove(token: Token, amount: BigNumberish): string {

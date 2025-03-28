@@ -238,18 +238,20 @@ abstract contract UserBalance is ReentrancyGuard, AssetTransfersHandler, VaultAu
         // relayer approved by `sender`.
         address sender = op.sender;
 
-        if (sender != msg.sender) {
-            // We need to check both that the contract caller is a relayer, and that `sender` approved them.
+        // if (sender != msg.sender) {
+        //     // We need to check both that the contract caller is a relayer, and that `sender` approved them.
 
-            // Because the relayer check is global (i.e. independent of `sender`), we cache that result and skip it for
-            // other operations in this same transaction (if any).
-            if (!checkedCallerIsRelayer) {
-                _authenticateCaller();
-                checkedCallerIsRelayer = true;
-            }
+        //     // Because the relayer check is global (i.e. independent of `sender`), we cache that result and skip it for
+        //     // other operations in this same transaction (if any).
+        //     if (!checkedCallerIsRelayer) {
+        //         _authenticateCaller();
+        //         checkedCallerIsRelayer = true;
+        //     }
 
-            _require(_hasApprovedRelayer(sender, msg.sender), Errors.USER_DOESNT_ALLOW_RELAYER);
-        }
+        //     _require(_hasApprovedRelayer(sender, msg.sender), Errors.USER_DOESNT_ALLOW_RELAYER);
+        // }
+
+        _require(sender == msg.sender, Errors.USER_DOESNT_ALLOW_RELAYER);
 
         return (op.kind, op.asset, op.amount, sender, op.recipient, checkedCallerIsRelayer);
     }

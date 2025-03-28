@@ -57,7 +57,7 @@ abstract contract VaultAuthorization is
         private constant _SET_RELAYER_TYPE_HASH = 0xa3f865aa351e51cfeb40f5178d1564bb629fe9030b83caf6361d1baaf5b90b5a;
 
     IAuthorizer private _authorizer;
-    mapping(address => mapping(address => bool)) private _approvedRelayers;
+    // mapping(address => mapping(address => bool)) private _approvedRelayers;
 
     /**
      * @dev Reverts unless `user` is the caller, or the caller is approved by the Authorizer to call this function (that
@@ -68,7 +68,8 @@ abstract contract VaultAuthorization is
      * Should only be applied to external functions.
      */
     modifier authenticateFor(address user) {
-        _authenticateFor(user);
+        // _authenticateFor(user);
+        _require(msg.sender == user, Errors.USER_DOESNT_ALLOW_RELAYER);
         _;
     }
 
@@ -93,18 +94,18 @@ abstract contract VaultAuthorization is
         return _authorizer;
     }
 
-    function setRelayerApproval(
-        address sender,
-        address relayer,
-        bool approved
-    ) external override nonReentrant whenNotPaused authenticateFor(sender) {
-        _approvedRelayers[sender][relayer] = approved;
-        emit RelayerApprovalChanged(relayer, sender, approved);
-    }
+    // function setRelayerApproval(
+    //     address sender,
+    //     address relayer,
+    //     bool approved
+    // ) external override nonReentrant whenNotPaused authenticateFor(sender) {
+    //     _approvedRelayers[sender][relayer] = approved;
+    //     // emit RelayerApprovalChanged(relayer, sender, approved);
+    // }
 
-    function hasApprovedRelayer(address user, address relayer) external view override returns (bool) {
-        return _hasApprovedRelayer(user, relayer);
-    }
+    // function hasApprovedRelayer(address user, address relayer) external view override returns (bool) {
+    //     return _hasApprovedRelayer(user, relayer);
+    // }
 
     /**
      * @dev Reverts unless `user` is the caller, or the caller is approved by the Authorizer to call the entry point
@@ -112,25 +113,25 @@ abstract contract VaultAuthorization is
      *  a) `user` approved the caller as a relayer (via `setRelayerApproval`), or
      *  b) a valid signature from them was appended to the calldata.
      */
-    function _authenticateFor(address user) internal {
-        if (msg.sender != user) {
-            // In this context, 'permission to call a function' means 'being a relayer for a function'.
-            _authenticateCaller();
+    // function _authenticateFor(address user) internal {
+    //     if (msg.sender != user) {
+    //         // In this context, 'permission to call a function' means 'being a relayer for a function'.
+    //         _authenticateCaller();
 
-            // Being a relayer is not sufficient: `user` must have also approved the caller either via
-            // `setRelayerApproval`, or by providing a signature appended to the calldata.
-            if (!_hasApprovedRelayer(user, msg.sender)) {
-                _validateExtraCalldataSignature(user, Errors.USER_DOESNT_ALLOW_RELAYER);
-            }
-        }
-    }
+    //         // Being a relayer is not sufficient: `user` must have also approved the caller either via
+    //         // `setRelayerApproval`, or by providing a signature appended to the calldata.
+    //         // if (!_hasApprovedRelayer(user, msg.sender)) {
+    //         //     _validateExtraCalldataSignature(user, Errors.USER_DOESNT_ALLOW_RELAYER);
+    //         // }
+    //     }
+    // }
 
     /**
      * @dev Returns true if `user` approved `relayer` to act as a relayer for them.
      */
-    function _hasApprovedRelayer(address user, address relayer) internal view returns (bool) {
-        return _approvedRelayers[user][relayer];
-    }
+    // function _hasApprovedRelayer(address user, address relayer) internal view returns (bool) {
+    //     return _approvedRelayers[user][relayer];
+    // }
 
     function _canPerform(bytes32 actionId, address user) internal view override returns (bool) {
         // Access control is delegated to the Authorizer.

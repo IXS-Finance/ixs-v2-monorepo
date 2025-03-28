@@ -86,7 +86,7 @@ describe('SiloWrapping', function () {
     );
 
     // Approve relayer by sender
-    await vault.instance.connect(senderUser).setRelayerApproval(senderUser.address, relayer.address, true);
+    // await vault.instance.connect(senderUser).setRelayerApproval(senderUser.address, relayer.address, true);
   });
 
   function encodeApprove(token: Token, amount: BigNumberish): string {
