@@ -184,23 +184,23 @@ describe('Pool Fees authorization', () => {
           const [poolAddress] = (await vault.getPool(mainPoolId)) as [string, unknown];
           await voter.connect(admin).setGauge(poolAddress, mockGauge.address);
 
-          const ratio_before = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
+          const ratio_before = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.WETH.address);
           expect(ratio_before).to.be.equal(bn(0));
           await vault
             .connect(sender)
             .batchSwap(SwapKind.GivenIn, swaps, tokenAddresses, funds, limits, deadline, { value: bn(1e18) });
 
-          const ratioWETH = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
-          expect(ratioWETH).to.be.equal(bn(3e9)); // (3e15 * 1e18) / (1e6 * 1e18)
-          const ratioDAI = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.DAI.address);
+          const ratioWETH = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.WETH.address);
+          expect(ratioWETH).to.be.equal(bn(3e15)); // (3e15 * 1e18) / (1e6 * 1e18)
+          const ratioDAI = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.DAI.address);
           expect(ratioDAI).to.be.equal(bn(0));
 
-          await expect(poolFeesCollector.connect(mockGauge).claimPoolTokensFees(mainPoolId, lp.address))
+          await expect(poolFeesCollector.connect(mockGauge).claimPoolTokensFees(mainPoolId, mockGauge.address))
             .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
-            .withArgs(mainPoolId, tokens.WETH.address, bn(3e14), lp.address); // 3e9 * 1e5 * 1e18 / 1e18
+            .withArgs(mainPoolId, tokens.WETH.address, bn(3e15), mockGauge.address); // 3e9 * 1e5 * 1e18 / 1e18
 
           // after claiming, claimable amount should be 0
-          const claimableAmount = await poolFeesCollector.claimable(lp.address, mainPoolId, tokens.WETH.address);
+          const claimableAmount = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.WETH.address);
           expect(claimableAmount).to.be.equal(bn(0));
 
         });
@@ -278,7 +278,6 @@ describe('Pool Fees authorization', () => {
 
     // Concatenate function selector and padded address
     const concatenated = targetAddress + functionSelector.slice(2);
-    console.log('concatenated', concatenated);
     // Hash the concatenated bytes
     return ethers.utils.keccak256(concatenated);
   }
