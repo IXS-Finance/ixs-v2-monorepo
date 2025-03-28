@@ -51,21 +51,21 @@ type SwapInput = {
 };
 
 describe('Pool Fees', () => {
-  let vault: Contract, authorizer: Contract, funds: FundManagement, poolFeesCollector: Contract;
+  let vault: Contract, authorizer: Contract, funds: FundManagement, poolFeesCollector: Contract, voter: Contract;
   let tokens: TokenList;
   let mainPoolId: string, secondaryPoolId: string;
-  let lp: SignerWithAddress, trader: SignerWithAddress, other: SignerWithAddress, admin: SignerWithAddress;
+  let lp: SignerWithAddress, trader: SignerWithAddress, other: SignerWithAddress, admin: SignerWithAddress, mockGauge: SignerWithAddress;
 
   const poolInitialBalance = bn(50e18);
 
   before('setup', async () => {
-    [, lp, trader, other, admin] = await ethers.getSigners();
+    [, lp, trader, other, admin, mockGauge] = await ethers.getSigners();
   });
 
   sharedBeforeEach('deploy vault and tokens', async () => {
     tokens = await TokenList.create(['DAI', 'MKR', 'SNX']);
 
-    ({ instance: vault, authorizer } = await Vault.create({ admin }));
+    ({ instance: vault, authorizer, voter } = await Vault.create({ admin }));
 
     poolFeesCollector = await deployedAt('PoolFees', await vault.getPoolFeesCollector());
 
@@ -166,6 +166,12 @@ describe('Pool Fees', () => {
               userData: '0x',
             },
           ];
+          const action = generateActionId('setVoter(address)', poolFeesCollector.address);
+          await authorizer.connect(admin).grantPermission(action, other.address, ANY_ADDRESS);
+          await poolFeesCollector.connect(other).setVoter(voter.address);
+          const [poolAddress] = (await vault.getPool(mainPoolId)) as [string, unknown];
+          await voter.connect(admin).setGauge(poolAddress, mockGauge.address);
+
           const ratio_before = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
           expect(ratio_before).to.be.equal(bn(0));
           await vault
@@ -177,7 +183,7 @@ describe('Pool Fees', () => {
           const ratioDAI = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.DAI.address);
           expect(ratioDAI).to.be.equal(bn(0));
 
-          await expect(poolFeesCollector.connect(lp).claimPoolTokensFees(mainPoolId, lp.address))
+          await expect(poolFeesCollector.connect(mockGauge).claimPoolTokensFees(mainPoolId, lp.address))
             .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
             .withArgs(mainPoolId, tokens.WETH.address, bn(3e14), lp.address); // 3e9 * 1e5 * 1e18 / 1e18
 
@@ -186,10 +192,10 @@ describe('Pool Fees', () => {
           expect(claimableAmount).to.be.equal(bn(0));
 
           // test supplyIndex
-          const WETHsupplyIndex = await poolFeesCollector.supplyIndex(lp.address, mainPoolId, tokens.WETH.address);
+          const WETHsupplyIndex = await poolFeesCollector.supplyIndex(mockGauge.address, mainPoolId, tokens.WETH.address);
           expect(WETHsupplyIndex).to.be.equal(ratioWETH);
 
-          const DAIsupplyIndex = await poolFeesCollector.supplyIndex(lp.address, mainPoolId, tokens.DAI.address);
+          const DAIsupplyIndex = await poolFeesCollector.supplyIndex(mockGauge.address, mainPoolId, tokens.DAI.address);
           expect(DAIsupplyIndex).to.be.equal(ratioDAI);
         });
 
@@ -210,6 +216,11 @@ describe('Pool Fees', () => {
               userData: '0x',
             },
           ];
+          const action = generateActionId('setVoter(address)', poolFeesCollector.address);
+          await authorizer.connect(admin).grantPermission(action, other.address, ANY_ADDRESS);
+          await poolFeesCollector.connect(other).setVoter(voter.address);
+          const [poolAddress] = (await vault.getPool(mainPoolId)) as [string, unknown];
+          await voter.connect(admin).setGauge(poolAddress, mockGauge.address);
           const ratio_before = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
           expect(ratio_before).to.be.equal(bn(0));
           await vault
@@ -220,7 +231,7 @@ describe('Pool Fees', () => {
           const ratioDAI = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.DAI.address);
           expect(ratioDAI).to.be.equal(bn(0));
 
-          await expect(poolFeesCollector.connect(lp).claimPoolTokensFees(mainPoolId, lp.address))
+          await expect(poolFeesCollector.connect(mockGauge).claimPoolTokensFees(mainPoolId, lp.address))
             .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
             .withArgs(mainPoolId, tokens.WETH.address, bn(3e14), lp.address); // 6e9 * 1e5 * 1e18 / 1e18
           
@@ -229,10 +240,10 @@ describe('Pool Fees', () => {
           expect(claimableAmount).to.be.equal(bn(0));
 
           // test supplyIndex
-          const WETHsupplyIndex = await poolFeesCollector.supplyIndex(lp.address, mainPoolId, tokens.WETH.address);
+          const WETHsupplyIndex = await poolFeesCollector.supplyIndex(mockGauge.address, mainPoolId, tokens.WETH.address);
           expect(WETHsupplyIndex).to.be.equal(ratioWETH);
 
-          const DAIsupplyIndex = await poolFeesCollector.supplyIndex(lp.address, mainPoolId, tokens.DAI.address);
+          const DAIsupplyIndex = await poolFeesCollector.supplyIndex(mockGauge.address, mainPoolId, tokens.DAI.address);
           expect(DAIsupplyIndex).to.be.equal(ratioDAI);
         });
 
@@ -253,6 +264,11 @@ describe('Pool Fees', () => {
               userData: '0x',
             },
           ];
+          const action = generateActionId('setVoter(address)', poolFeesCollector.address);
+          await authorizer.connect(admin).grantPermission(action, other.address, ANY_ADDRESS);
+          await poolFeesCollector.connect(other).setVoter(voter.address);
+          const [poolAddress] = (await vault.getPool(mainPoolId)) as [string, unknown];
+          await voter.connect(admin).setGauge(poolAddress, mockGauge.address);
           const ratio_before = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
           expect(ratio_before).to.be.equal(bn(0));
           await vault
@@ -263,7 +279,7 @@ describe('Pool Fees', () => {
           const ratioDAI = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.DAI.address);
           expect(ratioDAI).to.be.equal(bn(3e9));
 
-          await expect(poolFeesCollector.connect(lp).claimPoolTokensFees(mainPoolId, lp.address))
+          await expect(poolFeesCollector.connect(mockGauge).claimPoolTokensFees(mainPoolId, lp.address))
             .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
             .withArgs(mainPoolId, tokens.WETH.address, bn(3e14), lp.address)
             .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
@@ -276,137 +292,10 @@ describe('Pool Fees', () => {
           const claimabledAIAmount = await poolFeesCollector.claimable(lp.address, mainPoolId, tokens.DAI.address);
           expect(claimabledAIAmount).to.be.equal(bn(0));
           // test supplyIndex
-          const WETHsupplyIndex = await poolFeesCollector.supplyIndex(lp.address, mainPoolId, tokens.WETH.address);
+          const WETHsupplyIndex = await poolFeesCollector.supplyIndex(mockGauge.address, mainPoolId, tokens.WETH.address);
           expect(WETHsupplyIndex).to.be.equal(ratioWETH);
 
-          const DAIsupplyIndex = await poolFeesCollector.supplyIndex(lp.address, mainPoolId, tokens.DAI.address);
-          expect(DAIsupplyIndex).to.be.equal(ratioDAI);
-        });
-
-        it('ClaimAll pool token fee after a single swap', async () => {
-          const swaps = [
-            {
-              poolId: mainPoolId,
-              assetInIndex: 0, // ETH
-              assetOutIndex: 1,
-              amount: bn(1e18),
-              userData: '0x',
-            },
-          ];
-          const ratio_before = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
-          expect(ratio_before).to.be.equal(bn(0));
-          await vault
-            .connect(sender)
-            .batchSwap(SwapKind.GivenIn, swaps, tokenAddresses, funds, limits, deadline, { value: bn(1e18) });
-
-          const ratioWETH = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
-          expect(ratioWETH).to.be.equal(bn(3e9)); // (3e15 * 1e18) / (1e6 * 1e18)
-          const ratioDAI = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.DAI.address);
-          expect(ratioDAI).to.be.equal(bn(0));
-
-          await expect(poolFeesCollector.connect(lp).claimAll(mainPoolId, lp.address))
-            .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
-            .withArgs(mainPoolId, tokens.WETH.address, bn(3e14), lp.address); // 3e9 * 1e5 * 1e18 / 1e18
-
-          // after claiming, claimable amount should be 0
-          const claimableAmount = await poolFeesCollector.claimable(lp.address, mainPoolId, tokens.WETH.address);
-          expect(claimableAmount).to.be.equal(bn(0));
-
-          // test supplyIndex
-          const WETHsupplyIndex = await poolFeesCollector.supplyIndex(lp.address, mainPoolId, tokens.WETH.address);
-          expect(WETHsupplyIndex).to.be.equal(ratioWETH);
-
-          const DAIsupplyIndex = await poolFeesCollector.supplyIndex(lp.address, mainPoolId, tokens.DAI.address);
-          expect(DAIsupplyIndex).to.be.equal(ratioDAI);
-        });
-
-        it('ClaimAll pool token fee after a multiple swap with the same tokenIn', async () => {
-          const swaps = [
-            {
-              poolId: mainPoolId,
-              assetInIndex: 0, // ETH
-              assetOutIndex: 1,
-              amount: bn(5e17),
-              userData: '0x',
-            },
-            {
-              poolId: mainPoolId,
-              assetInIndex: 0, // ETH
-              assetOutIndex: 1,
-              amount: bn(5e17),
-              userData: '0x',
-            },
-          ];
-          const ratio_before = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
-          expect(ratio_before).to.be.equal(bn(0));
-          await vault
-            .connect(sender)
-            .batchSwap(SwapKind.GivenIn, swaps, tokenAddresses, funds, limits, deadline, { value: bn(1e18) });
-          const ratioWETH = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
-          expect(ratioWETH).to.be.equal(bn(3e9)); // (3e15 * 1e18) / (1e6 * 1e18)
-          const ratioDAI = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.DAI.address);
-          expect(ratioDAI).to.be.equal(bn(0));
-
-          await expect(poolFeesCollector.connect(lp).claimAll(mainPoolId, lp.address))
-            .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
-            .withArgs(mainPoolId, tokens.WETH.address, bn(3e14), lp.address); // 6e9 * 1e5 * 1e18 / 1e18
-          
-          // after claiming, claimable amount should be 0
-          const claimableAmount = await poolFeesCollector.claimable(lp.address, mainPoolId, tokens.WETH.address);
-          expect(claimableAmount).to.be.equal(bn(0));
-
-          // test supplyIndex
-          const WETHsupplyIndex = await poolFeesCollector.supplyIndex(lp.address, mainPoolId, tokens.WETH.address);
-          expect(WETHsupplyIndex).to.be.equal(ratioWETH);
-
-          const DAIsupplyIndex = await poolFeesCollector.supplyIndex(lp.address, mainPoolId, tokens.DAI.address);
-          expect(DAIsupplyIndex).to.be.equal(ratioDAI);
-        });
-
-        it('ClaimAll pool token fee after multiple swaps with different tokenIn', async () => {
-          const swaps = [
-            {
-              poolId: mainPoolId,
-              assetInIndex: 0, // ETH
-              assetOutIndex: 1,
-              amount: bn(1e18),
-              userData: '0x',
-            },
-            {
-              poolId: mainPoolId,
-              assetInIndex: 1, // ETH
-              assetOutIndex: 0,
-              amount: bn(1e18),
-              userData: '0x',
-            },
-          ];
-          const ratio_before = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
-          expect(ratio_before).to.be.equal(bn(0));
-          await vault
-            .connect(sender)
-            .batchSwap(SwapKind.GivenIn, swaps, tokenAddresses, funds, limits, deadline, { value: bn(1e18) });
-          const ratioWETH = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
-          expect(ratioWETH).to.be.equal(bn(3e9)); // (3e15 * 1e18) / (1e6 * 1e18)
-          const ratioDAI = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.DAI.address);
-          expect(ratioDAI).to.be.equal(bn(3e9));
-
-          await expect(poolFeesCollector.connect(lp).claimAll(mainPoolId, lp.address))
-            .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
-            .withArgs(mainPoolId, tokens.WETH.address, bn(3e14), lp.address)
-            .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
-            .withArgs(mainPoolId, tokens.DAI.address, bn(3e14), lp.address);
-          
-          // after claiming, claimable amount should be 0
-          const claimableWETHAmount = await poolFeesCollector.claimable(lp.address, mainPoolId, tokens.WETH.address);
-          expect(claimableWETHAmount).to.be.equal(bn(0));
-          
-          const claimabledAIAmount = await poolFeesCollector.claimable(lp.address, mainPoolId, tokens.DAI.address);
-          expect(claimabledAIAmount).to.be.equal(bn(0));
-          // test supplyIndex
-          const WETHsupplyIndex = await poolFeesCollector.supplyIndex(lp.address, mainPoolId, tokens.WETH.address);
-          expect(WETHsupplyIndex).to.be.equal(ratioWETH);
-
-          const DAIsupplyIndex = await poolFeesCollector.supplyIndex(lp.address, mainPoolId, tokens.DAI.address);
+          const DAIsupplyIndex = await poolFeesCollector.supplyIndex(mockGauge.address, mainPoolId, tokens.DAI.address);
           expect(DAIsupplyIndex).to.be.equal(ratioDAI);
         });
 
@@ -1786,5 +1675,15 @@ describe('Pool Fees', () => {
       });
     });
   });
+  }
+
+  function generateActionId(functionSignature: string, targetAddress: string): string {
+    // Convert function signature to bytes32
+    const functionSelector = ethers.utils.id(functionSignature).slice(0, 10);
+
+    // Concatenate function selector and padded address
+    const concatenated = targetAddress + functionSelector.slice(2);
+    // Hash the concatenated bytes
+    return ethers.utils.keccak256(concatenated);
   }
 });

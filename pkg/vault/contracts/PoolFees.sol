@@ -18,10 +18,11 @@ pragma experimental ABIEncoderV2;
 import "@balancer-labs/v2-interfaces/contracts/solidity-utils/helpers/BalancerErrors.sol";
 import "@balancer-labs/v2-interfaces/contracts/solidity-utils/openzeppelin/IERC20.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
-
+import "@balancer-labs/v2-interfaces/contracts/vault/IAuthorizer.sol";
 import "@balancer-labs/v2-solidity-utils/contracts/openzeppelin/SafeERC20.sol";
 
 import "@balancer-labs/v2-interfaces/contracts/vault/IPoolFees.sol";
+import "@balancer-labs/v2-interfaces/contracts/vault/IVoter.sol";
 
 
 contract PoolFees is IPoolFees {
@@ -29,8 +30,10 @@ contract PoolFees is IPoolFees {
     event UpdateRatio(bytes32 poolId, address token, uint256 feeAmount);
     event ClaimPoolTokenFees(bytes32 poolId, address token, uint256 feeAmount, address recipient);
     event ClaimBPTFees(bytes32 poolId, address token, uint256 feeAmount, address recipient);
+    event VoterChanged(address voter);
 
     address public vault;
+    address public voter;
 
     mapping(address => mapping(bytes32 => mapping(address => uint256))) public supplyIndex;
     mapping(address => mapping(bytes32 => mapping(address => uint256))) public claimable;
@@ -111,6 +114,9 @@ contract PoolFees is IPoolFees {
         IVault(vault).exitPool(poolId, address(this), payable(recipient), request);
     }
 
+    // @dev claim fees for all tokens based on poolId to a recipient, only allowed for gauge
+    // @param _poolId pool id
+    // @param recipient recipient address
     function claimPoolTokensFees(
         bytes32 _poolId,
         address recipient
@@ -119,16 +125,19 @@ contract PoolFees is IPoolFees {
         override
         returns (address[] memory tokens, uint256[] memory claimableAmounts)
     {
+        address gauge = pool2Gauge(_poolId);
+        require(gauge == msg.sender, "only allowed for gauge");
        (tokens, claimableAmounts) = _claimPoolTokensFees(_poolId, recipient);
     }
 
-    function claimBPTFees(bytes32 _poolId, address recipient) external override{
+    // @dev claim fees for BPT tokens to a recipient, only allowed for team
+    // @param _poolId pool id
+    // @param recipient recipient address
+    function claimBPTFees(bytes32 _poolId, address recipient) external override {
+        address authorizer = address(IVault(vault).getAuthorizer());
+        bytes32 actionId = keccak256(abi.encodePacked(address(this), msg.sig));
+        require(IAuthorizer(authorizer).canPerform(actionId, msg.sender, address(this)), "only allowed for authorizer");
         _claimBPTFees(_poolId, recipient);
-    }
-
-    function claimAll(bytes32 _poolIds, address recipient) external override{
-        _claimPoolTokensFees(_poolIds, recipient);
-        _claimBPTFees(_poolIds, recipient);
     }
 
     function _convertERC20ToIAsset(IERC20[] memory tokens) internal pure returns (IAsset[] memory) {
@@ -190,5 +199,20 @@ contract PoolFees is IPoolFees {
 
     function getIndexRatio(bytes32 _poolId, address _token) external view returns (uint256) {
         return indexRatio[_poolId][_token];
+    }
+
+    function setVoter(address _voter) external
+    {
+        address authorizer = address(IVault(vault).getAuthorizer());
+        bytes32 actionId = keccak256(abi.encodePacked(address(this), msg.sig));
+        require(IAuthorizer(authorizer).canPerform(actionId, msg.sender, address(this)), "only allowed for authorizer");
+        voter = _voter;
+        emit VoterChanged(_voter);
+    }
+
+    function pool2Gauge(bytes32 _poolId) internal view returns (address) {
+        address _poolAddr;
+        (_poolAddr, ) = IVault(vault).getPool(_poolId);
+        return IVoter(voter).gauges(_poolAddr);
     }
 }

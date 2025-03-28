@@ -25,6 +25,7 @@ export default class Vault {
   protocolFeesProvider: Contract;
   admin?: SignerWithAddress;
   feesCollector?: Contract;
+  voter?: Contract;
 
   get interface(): Interface {
     return this.instance.interface;
@@ -42,7 +43,8 @@ export default class Vault {
     rwaRegistry: Contract,
     authorizerAdaptorEntrypoint: Contract,
     protocolFeesProvider: Contract,
-    admin?: SignerWithAddress
+    admin?: SignerWithAddress,
+    voter?: Contract
   ) {
     this.mocked = mocked;
     this.instance = instance;
@@ -52,6 +54,7 @@ export default class Vault {
     this.authorizerAdaptorEntrypoint = authorizerAdaptorEntrypoint;
     this.protocolFeesProvider = protocolFeesProvider;
     this.admin = admin;
+    this.voter = voter;
   }
 
   get address(): string {
