@@ -162,27 +162,12 @@ contract PoolFees is IPoolFees {
         address poolAddr;
         (poolAddr, ) = IVault(vault).getPool(_poolId);
         require(msg.sender == poolAddr || msg.sender == vault, "only allowed for pool or vault");
-        feesAmounts[_poolId][_token] = _feeAmount;
+        feesAmounts[_poolId][_token] += _feeAmount;
         emit UpdateFeesAmount(_poolId, _token, _feeAmount);
     }
 
     function getFeesAmounts(bytes32 _poolId, address _token) external view returns (uint256) {
         return feesAmounts[_poolId][_token];
-    }
-
-    function setVoter(address _voter) external
-    {
-        address authorizer = address(IVault(vault).getAuthorizer());
-        bytes32 actionId = keccak256(abi.encodePacked(address(this), msg.sig));
-        require(IAuthorizer(authorizer).canPerform(actionId, msg.sender, address(this)), "only allowed for authorizer");
-        voter = _voter;
-        emit VoterChanged(_voter);
-    }
-
-    function pool2Gauge(bytes32 _poolId) internal view returns (address) {
-        address _poolAddr;
-        (_poolAddr, ) = IVault(vault).getPool(_poolId);
-        return IVoter(voter).gauges(_poolAddr);
     }
 
     function setVoter(address _voter) external

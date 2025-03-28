@@ -224,13 +224,13 @@ describe('Pool Fees', () => {
             .connect(sender)
             .batchSwap(SwapKind.GivenIn, swaps, tokenAddresses, funds, limits, deadline, { value: bn(1e18) });
           const ratioWETH = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.WETH.address);
-          expect(ratioWETH).to.be.equal(bn(15e14)); // (3e15 * 1e18) / (1e6 * 1e18)
+          expect(ratioWETH).to.be.equal(bn(3e15)); // (3e15 * 1e18) / (1e6 * 1e18)
           const ratioDAI = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.DAI.address);
           expect(ratioDAI).to.be.equal(bn(0));
           
           await expect(poolFeesCollector.connect(mockGauge).claimPoolTokensFees(mainPoolId, mockGauge.address))
             .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
-            .withArgs(mainPoolId, tokens.WETH.address, bn(15e14), mockGauge.address); // 6e9 * 1e5 * 1e18 / 1e18
+            .withArgs(mainPoolId, tokens.WETH.address, bn(3e15), mockGauge.address); // 6e9 * 1e5 * 1e18 / 1e18
           
           // after claiming, claimable amount should be 0
           const claimableAmount = await poolFeesCollector.feesAmounts(mainPoolId, tokens.WETH.address);
