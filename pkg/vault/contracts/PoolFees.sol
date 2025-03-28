@@ -184,4 +184,19 @@ contract PoolFees is IPoolFees {
         (_poolAddr, ) = IVault(vault).getPool(_poolId);
         return IVoter(voter).gauges(_poolAddr);
     }
+
+    function setVoter(address _voter) external
+    {
+        address authorizer = address(IVault(vault).getAuthorizer());
+        bytes32 actionId = keccak256(abi.encodePacked(address(this), msg.sig));
+        require(IAuthorizer(authorizer).canPerform(actionId, msg.sender, address(this)), "only allowed for authorizer");
+        voter = _voter;
+        emit VoterChanged(_voter);
+    }
+
+    function pool2Gauge(bytes32 _poolId) internal view returns (address) {
+        address _poolAddr;
+        (_poolAddr, ) = IVault(vault).getPool(_poolId);
+        return IVoter(voter).gauges(_poolAddr);
+    }
 }
