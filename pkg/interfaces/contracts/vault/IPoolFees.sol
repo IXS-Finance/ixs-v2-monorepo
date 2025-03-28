@@ -30,10 +30,7 @@ interface IPoolFees{
      */
     function claimBPTFees(bytes32 _poolId, address recipient) external;
 
-    /**
-     * @dev update ratio of token
-     */
-    function updateRatio(
+    function updateFeesAmount(
         bytes32 _poolId,
         address _token,
         uint256 _feeAmount
