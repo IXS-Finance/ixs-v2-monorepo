@@ -173,6 +173,7 @@ describe('Pool Fees', () => {
           await voter.connect(admin).setGauge(poolAddress, mockGauge.address);
 
           const ratio_before = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.WETH.address);
+
           expect(ratio_before).to.be.equal(bn(0));
           await vault
             .connect(sender)
@@ -184,6 +185,7 @@ describe('Pool Fees', () => {
           expect(ratioDAI).to.be.equal(bn(0));
 
           await expect(poolFeesCollector.connect(mockGauge).claimPoolTokensFees(mainPoolId, mockGauge.address))
+
             .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
             .withArgs(mainPoolId, tokens.WETH.address, bn(3e15), mockGauge.address); // 3e9 * 1e5 * 1e18 / 1e18
 
@@ -216,6 +218,7 @@ describe('Pool Fees', () => {
           const [poolAddress] = (await vault.getPool(mainPoolId)) as [string, unknown];
           await voter.connect(admin).setGauge(poolAddress, mockGauge.address);
           const ratio_before = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.WETH.address);
+
           expect(ratio_before).to.be.equal(bn(0));
           await vault
             .connect(sender)
@@ -278,7 +281,6 @@ describe('Pool Fees', () => {
           
           const claimabledAIAmount = await poolFeesCollector.feesAmounts(mainPoolId, tokens.DAI.address);
           expect(claimabledAIAmount).to.be.equal(bn(0));
-          // test supplyIndex
         });
 
         it('received ETH is wrapped into WETH', async () => {

@@ -14,6 +14,7 @@ import TokenList from '@balancer-labs/v2-helpers/src/models/tokens/TokenList';
 import { toNormalizedWeights } from '@balancer-labs/balancer-js';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { randomBytes } from 'ethers/lib/utils';
+import { adapterParams } from '../../../../../abracadabra-ui/src/helpers/beam/getAdapterParams';
 
 describe('WeightedPoolFactory', function () {
   let tokens: TokenList;
@@ -21,6 +22,9 @@ describe('WeightedPoolFactory', function () {
   let vault: Vault;
   let rateProviders: string[];
   let owner: SignerWithAddress;
+  let admin: SignerWithAddress;
+  let authorizer: Contract;
+  let rwaRegistry: Contract;
 
   const NAME = 'Balancer Pool Token';
   const SYMBOL = 'BPT';
@@ -33,14 +37,23 @@ describe('WeightedPoolFactory', function () {
   let createTime: BigNumber;
 
   before('setup signers', async () => {
-    [, owner] = await ethers.getSigners();
+    [, owner, admin] = await ethers.getSigners();
   });
 
   sharedBeforeEach('deploy factory & tokens', async () => {
     vault = await Vault.create();
+    authorizer = await deploy('v2-vault/Authorizer', { args: [admin.address] });
 
+    rwaRegistry = await deploy('v2-vault/RwaRegistry', { args: [authorizer.address] });
     factory = await deploy('WeightedPoolFactory', {
-      args: [vault.address, vault.getFeesProvider().address, BASE_PAUSE_WINDOW_DURATION, BASE_BUFFER_PERIOD_DURATION],
+      args: [
+        vault.address,
+        vault.getFeesProvider().address,
+        BASE_PAUSE_WINDOW_DURATION,
+        BASE_BUFFER_PERIOD_DURATION,
+        authorizer.address,
+        rwaRegistry.address,
+      ],
     });
     createTime = await currentTimestamp();
 

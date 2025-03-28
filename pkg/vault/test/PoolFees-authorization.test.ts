@@ -185,6 +185,7 @@ describe('Pool Fees authorization', () => {
           await voter.connect(admin).setGauge(poolAddress, mockGauge.address);
 
           const ratio_before = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.WETH.address);
+
           expect(ratio_before).to.be.equal(bn(0));
           await vault
             .connect(sender)
@@ -201,6 +202,7 @@ describe('Pool Fees authorization', () => {
 
           // after claiming, claimable amount should be 0
           const claimableAmount = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.WETH.address);
+
           expect(claimableAmount).to.be.equal(bn(0));
 
         });
@@ -278,6 +280,7 @@ describe('Pool Fees authorization', () => {
 
     // Concatenate function selector and padded address
     const concatenated = targetAddress + functionSelector.slice(2);
+
     // Hash the concatenated bytes
     return ethers.utils.keccak256(concatenated);
   }
