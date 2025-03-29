@@ -152,7 +152,7 @@ contract PoolFees is IPoolFees {
      * @param _token tokenIn address
      * @param _feeAmount swapping fee
      */
-    function updateFeesAmount(
+    function updateFeeAmount(
         bytes32 _poolId,
         address _token,
         uint256 _feeAmount
@@ -162,7 +162,9 @@ contract PoolFees is IPoolFees {
         address poolAddr;
         (poolAddr, ) = IVault(vault).getPool(_poolId);
         require(msg.sender == poolAddr || msg.sender == vault, "only allowed for pool or vault");
+        require(feesAmounts[_poolId][_token] + _feeAmount >= feesAmounts[_poolId][_token], "Addition overflow");
         feesAmounts[_poolId][_token] += _feeAmount;
+
         emit UpdateFeesAmount(_poolId, _token, _feeAmount);
     }
 

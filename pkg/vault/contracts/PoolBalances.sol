@@ -207,7 +207,7 @@ abstract contract PoolBalances is Fees, ReentrancyGuard, PoolTokens, UserBalance
             IAsset asset = change.assets[i];
             IERC20(address(asset)).safeTransfer(address(IVault(this).getPoolFeesCollector()), dueProtocolFeeAmounts[i]); // transfer the fees out to PoolFees
 
-            _poolFeesCollector.updateFeesAmount(poolId, address(asset), dueProtocolFeeAmounts[i]);
+            _poolFeesCollector.updateFeeAmount(poolId, address(asset), dueProtocolFeeAmounts[i]);
         }
     }
 
