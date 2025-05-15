@@ -202,6 +202,13 @@ abstract contract PoolBalances is Fees, ReentrancyGuard, PoolTokens, UserBalance
         finalBalances = kind == PoolBalanceChangeKind.JOIN
             ? _processJoinPoolTransfers(sender, change, balances, amountsInOrOut, dueProtocolFeeAmounts)
             : _processExitPoolTransfers(recipient, change, balances, amountsInOrOut, dueProtocolFeeAmounts);
+        
+        for (uint256 i = 0; i < change.assets.length; ++i) {
+            IAsset asset = change.assets[i];
+            IERC20(address(asset)).safeTransfer(address(IVault(this).getPoolFeesCollector()), dueProtocolFeeAmounts[i]); // transfer the fees out to PoolFees
+
+            _poolFeesCollector.updateFeeAmount(poolId, address(asset), dueProtocolFeeAmounts[i]);
+        }
     }
 
     /**
@@ -235,7 +242,7 @@ abstract contract PoolBalances is Fees, ReentrancyGuard, PoolTokens, UserBalance
             }
 
             uint256 feeAmount = dueProtocolFeeAmounts[i];
-            _payFeeAmount(_translateToIERC20(asset), feeAmount);
+            // _payFeeAmount(_translateToIERC20(asset), feeAmount);
 
             // Compute the new Pool balances. Note that the fee amount might be larger than `amountIn`,
             // resulting in an overall decrease of the Pool's balance for a token.
@@ -272,7 +279,7 @@ abstract contract PoolBalances is Fees, ReentrancyGuard, PoolTokens, UserBalance
             _sendAsset(asset, amountOut, recipient, change.useInternalBalance);
 
             uint256 feeAmount = dueProtocolFeeAmounts[i];
-            _payFeeAmount(_translateToIERC20(asset), feeAmount);
+            // _payFeeAmount(_translateToIERC20(asset), feeAmount);
 
             // Compute the new Pool balances. A Pool's token balance always decreases after an exit (potentially by 0).
             finalBalances[i] = balances[i].decreaseCash(amountOut.add(feeAmount));

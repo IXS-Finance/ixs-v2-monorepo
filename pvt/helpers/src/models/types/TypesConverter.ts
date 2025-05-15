@@ -69,6 +69,8 @@ export default {
       swapFeePercentage,
       pauseWindowDuration,
       bufferPeriodDuration,
+      authorizer,
+      rwaRegistry,
     } = params;
     if (!params.owner) params.owner = ZERO_ADDRESS;
     if (!tokens) tokens = new TokenList();
@@ -79,7 +81,8 @@ export default {
     if (!bufferPeriodDuration) bufferPeriodDuration = DEFAULT_BUFFER_PERIOD_DURATION;
     if (!rateProviders) rateProviders = Array(tokens.length).fill(ZERO_ADDRESS);
     if (!assetManagers) assetManagers = Array(tokens.length).fill(ZERO_ADDRESS);
-
+    if (!authorizer) authorizer = params.authorizer;
+    if (!rwaRegistry) rwaRegistry = params.rwaRegistry;
     return {
       tokens,
       weights,
@@ -90,6 +93,8 @@ export default {
       bufferPeriodDuration,
       owner: this.toAddress(params.owner),
       from: params.from,
+      authorizer: this.toAddress(authorizer),
+      rwaRegistry: this.toAddress(rwaRegistry),
     };
   },
 

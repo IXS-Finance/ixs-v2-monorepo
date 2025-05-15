@@ -98,6 +98,7 @@ abstract contract BasePool is
 
     // Note that this value is immutable in the Vault, so we can make it immutable here and save gas
     IProtocolFeesCollector private immutable _protocolFeesCollector;
+    IPoolFees private immutable _poolFeesCollector;
 
     event SwapFeePercentageChanged(uint256 swapFeePercentage);
 
@@ -139,6 +140,7 @@ abstract contract BasePool is
         // Set immutable state variables - these cannot be read from during construction
         _poolId = poolId;
         _protocolFeesCollector = vault.getProtocolFeesCollector();
+        _poolFeesCollector = vault.getPoolFeesCollector();
     }
 
     // Getters / Setters
@@ -179,6 +181,14 @@ abstract contract BasePool is
      */
     function getProtocolFeesCollector() public view returns (IProtocolFeesCollector) {
         return _protocolFeesCollector;
+    }
+
+    /**
+     * @notice Return the PoolFees contract.
+     * @dev This is immutable, and retrieved from the Vault on construction. (It is also immutable in the Vault.)
+     */
+    function getPoolFeesCollector() public view returns (IPoolFees) {
+        return _poolFeesCollector;
     }
 
     /**
@@ -585,7 +595,8 @@ abstract contract BasePool is
      */
     function _payProtocolFees(uint256 bptAmount) internal {
         if (bptAmount > 0) {
-            _mintPoolTokens(address(getProtocolFeesCollector()), bptAmount);
+            // _mintPoolTokens(address(getProtocolFeesCollector()), bptAmount);
+            _mintPoolTokens(address(getPoolFeesCollector()), bptAmount);
         }
     }
 

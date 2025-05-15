@@ -33,6 +33,8 @@ import "@balancer-labs/v2-solidity-utils/contracts/math/Math.sol";
 import "./PoolBalances.sol";
 import "./balances/BalanceAllocation.sol";
 
+import "@balancer-labs/v2-interfaces/contracts/vault/IRwaERC20.sol";
+
 /**
  * Implements the Vault's high-level swap functionality.
  *
@@ -55,20 +57,54 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
     using SafeCast for uint256;
     using BalanceAllocation for bytes32;
 
-    function swap(
+    function _batchSwap(
+        SwapKind kind,
+        BatchSwapStep[] memory swaps,
+        IAsset[] memory assets,
+        FundManagement memory funds,
+        int256[] memory limits,
+        uint256 deadline
+    ) internal returns (int256[] memory assetDeltas) {
+        // The deadline is timestamp-based: it should not be relied upon for sub-minute accuracy.
+        // solhint-disable-next-line not-rely-on-time
+        _require(block.timestamp <= deadline, Errors.SWAP_DEADLINE);
+
+        InputHelpers.ensureInputLengthMatch(assets.length, limits.length);
+
+        // Perform the swaps, updating the Pool token balances and computing the net Vault asset deltas.
+        assetDeltas = _swapWithPools(swaps, assets, funds, kind);
+
+        // Process asset deltas, by either transferring assets from the sender (for positive deltas) or to the recipient
+        // (for negative deltas).
+        uint256 wrappedEth = 0;
+        for (uint256 i = 0; i < assets.length; ++i) {
+            IAsset asset = assets[i];
+            int256 delta = assetDeltas[i];
+            _require(delta <= limits[i], Errors.SWAP_LIMIT);
+
+            if (delta > 0) {
+                uint256 toReceive = uint256(delta);
+                _receiveAsset(asset, toReceive, funds.sender, funds.fromInternalBalance);
+
+                if (_isETH(asset)) {
+                    wrappedEth = wrappedEth.add(toReceive);
+                }
+            } else if (delta < 0) {
+                uint256 toSend = uint256(-delta);
+                _sendAsset(asset, toSend, funds.recipient, funds.toInternalBalance);
+            }
+        }
+
+        // Handle any used and remaining ETH.
+        _handleRemainingEth(wrappedEth);
+    }
+
+    function _swap(
         SingleSwap memory singleSwap,
         FundManagement memory funds,
         uint256 limit,
         uint256 deadline
-    )
-        external
-        payable
-        override
-        nonReentrant
-        whenNotPaused
-        authenticateFor(funds.sender)
-        returns (uint256 amountCalculated)
-    {
+    ) internal returns (uint256 amountCalculated) {
         // The deadline is timestamp-based: it should not be relied upon for sub-minute accuracy.
         // solhint-disable-next-line not-rely-on-time
         _require(block.timestamp <= deadline, Errors.SWAP_DEADLINE);
@@ -104,56 +140,6 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
 
         // If the asset in is ETH, then `amountIn` ETH was wrapped into WETH.
         _handleRemainingEth(_isETH(singleSwap.assetIn) ? amountIn : 0);
-    }
-
-    function batchSwap(
-        SwapKind kind,
-        BatchSwapStep[] memory swaps,
-        IAsset[] memory assets,
-        FundManagement memory funds,
-        int256[] memory limits,
-        uint256 deadline
-    )
-        external
-        payable
-        override
-        nonReentrant
-        whenNotPaused
-        authenticateFor(funds.sender)
-        returns (int256[] memory assetDeltas)
-    {
-        // The deadline is timestamp-based: it should not be relied upon for sub-minute accuracy.
-        // solhint-disable-next-line not-rely-on-time
-        _require(block.timestamp <= deadline, Errors.SWAP_DEADLINE);
-
-        InputHelpers.ensureInputLengthMatch(assets.length, limits.length);
-
-        // Perform the swaps, updating the Pool token balances and computing the net Vault asset deltas.
-        assetDeltas = _swapWithPools(swaps, assets, funds, kind);
-
-        // Process asset deltas, by either transferring assets from the sender (for positive deltas) or to the recipient
-        // (for negative deltas).
-        uint256 wrappedEth = 0;
-        for (uint256 i = 0; i < assets.length; ++i) {
-            IAsset asset = assets[i];
-            int256 delta = assetDeltas[i];
-            _require(delta <= limits[i], Errors.SWAP_LIMIT);
-
-            if (delta > 0) {
-                uint256 toReceive = uint256(delta);
-                _receiveAsset(asset, toReceive, funds.sender, funds.fromInternalBalance);
-
-                if (_isETH(asset)) {
-                    wrappedEth = wrappedEth.add(toReceive);
-                }
-            } else if (delta < 0) {
-                uint256 toSend = uint256(-delta);
-                _sendAsset(asset, toSend, funds.recipient, funds.toInternalBalance);
-            }
-        }
-
-        // Handle any used and remaining ETH.
-        _handleRemainingEth(wrappedEth);
     }
 
     // For `_swapWithPools` to handle both 'given in' and 'given out' swaps, it internally tracks the 'given' amount
@@ -296,6 +282,12 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
         }
 
         (amountIn, amountOut) = _getAmounts(request.kind, request.amount, amountCalculated);
+        // re-calculate swap fee
+        uint256 _swapFee = amountIn.mulUp(IProtocolFeesCollector(pool).getSwapFeePercentage());
+
+        _poolFeesCollector.updateFeeAmount(request.poolId, address(request.tokenIn), _swapFee);
+        IERC20(address(request.tokenIn)).safeTransfer(address(IVault(this).getPoolFeesCollector()), _swapFee); // transfer the fees out to PoolFees
+
         emit Swap(request.poolId, request.tokenIn, request.tokenOut, amountIn, amountOut);
     }
 
@@ -385,7 +377,11 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
         amountCalculated = pool.onSwap(request, tokenInTotal, tokenOutTotal);
         (uint256 amountIn, uint256 amountOut) = _getAmounts(request.kind, request.amount, amountCalculated);
 
-        newTokenInBalance = tokenInBalance.increaseCash(amountIn);
+        uint256 _swapFee = amountIn.mulUp(IProtocolFeesCollector(address(pool)).getSwapFeePercentage());
+        //transfer _swapFee to PoolFee
+        uint256 afterSwapFee = amountIn.sub(_swapFee);
+
+        newTokenInBalance = tokenInBalance.increaseCash(afterSwapFee);
         newTokenOutBalance = tokenOutBalance.decreaseCash(amountOut);
     }
 
@@ -435,7 +431,12 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
         // Perform the swap request callback and compute the new balances for 'token in' and 'token out' after the swap
         amountCalculated = pool.onSwap(request, currentBalances, indexIn, indexOut);
         (uint256 amountIn, uint256 amountOut) = _getAmounts(request.kind, request.amount, amountCalculated);
-        tokenInBalance = tokenInBalance.increaseCash(amountIn);
+
+        uint256 _swapFee = amountIn.mulUp(IProtocolFeesCollector(address(pool)).getSwapFeePercentage());
+        //transfer _swapFee to PoolFee
+        uint256 afterSwapFee = amountIn.sub(_swapFee);
+
+        tokenInBalance = tokenInBalance.increaseCash(afterSwapFee);
         tokenOutBalance = tokenOutBalance.decreaseCash(amountOut);
 
         // Because no tokens were registered or deregistered between now or when we retrieved the indexes for
@@ -537,4 +538,8 @@ abstract contract Swaps is ReentrancyGuard, PoolBalances {
             }
         }
     }
+
+    // function getIndexRatio(bytes32 _poolId, address _token) external view override returns (uint256) {
+    //     return indexRatio[_poolId][_token];
+    // }
 }

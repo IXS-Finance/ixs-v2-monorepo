@@ -26,6 +26,21 @@ abstract contract EOASignaturesValidator is ISignaturesValidator, EIP712 {
     // Replay attack prevention for each account.
     mapping(address => uint256) internal _nextNonce;
 
+    /**
+     * @dev Tracks the next valid nonce for each operator-account pair to prevent replay attacks.
+     *
+     * This mapping allows separate nonce management for each unique operator-account combination,
+     * enabling multiple operators to securely sign transactions on behalf of the same account
+     * without interference. Each operator has its own nonce for each account, which increments
+     * after a valid signature is processed.
+     *
+     * Mapping Structure:
+     * - `address operator`: The address of the operator acting on behalf of an account.
+     * - `address account`: The address of the account for which the operator is authorized.
+     * - `uint256 nonce`: The next valid nonce for this specific operator-account pair.
+     */
+    // mapping(address => mapping(address => uint256)) internal _nextNonceByOperator;
+
     function getDomainSeparator() public view override returns (bytes32) {
         return _domainSeparatorV4();
     }

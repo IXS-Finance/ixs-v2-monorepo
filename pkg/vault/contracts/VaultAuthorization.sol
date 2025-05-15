@@ -46,7 +46,7 @@ abstract contract VaultAuthorization is
     bytes32 private constant _EXIT_TYPE_HASH = 0x8bbc57f66ea936902f50a71ce12b92c43f3c5340bb40c27c4e90ab84eeae3353;
 
     // _SWAP_TYPE_HASH = keccak256("Swap(bytes calldata,address sender,uint256 nonce,uint256 deadline)");
-    bytes32 private constant _SWAP_TYPE_HASH = 0xe192dcbc143b1e244ad73b813fd3c097b832ad260a157340b4e5e5beda067abe;
+    bytes32 internal constant _SWAP_TYPE_HASH = 0xe192dcbc143b1e244ad73b813fd3c097b832ad260a157340b4e5e5beda067abe;
 
     // _BATCH_SWAP_TYPE_HASH = keccak256("BatchSwap(bytes calldata,address sender,uint256 nonce,uint256 deadline)");
     bytes32 private constant _BATCH_SWAP_TYPE_HASH = 0x9bfc43a4d98313c6766986ffd7c916c7481566d9f224c6819af0a53388aced3a;
@@ -57,7 +57,7 @@ abstract contract VaultAuthorization is
         private constant _SET_RELAYER_TYPE_HASH = 0xa3f865aa351e51cfeb40f5178d1564bb629fe9030b83caf6361d1baaf5b90b5a;
 
     IAuthorizer private _authorizer;
-    mapping(address => mapping(address => bool)) private _approvedRelayers;
+    // mapping(address => mapping(address => bool)) private _approvedRelayers;
 
     /**
      * @dev Reverts unless `user` is the caller, or the caller is approved by the Authorizer to call this function (that
@@ -68,7 +68,8 @@ abstract contract VaultAuthorization is
      * Should only be applied to external functions.
      */
     modifier authenticateFor(address user) {
-        _authenticateFor(user);
+        // _authenticateFor(user);
+        _require(msg.sender == user, Errors.USER_DOESNT_ALLOW_RELAYER);
         _;
     }
 
@@ -89,22 +90,22 @@ abstract contract VaultAuthorization is
         _authorizer = newAuthorizer;
     }
 
-    function getAuthorizer() external view override returns (IAuthorizer) {
+    function getAuthorizer() public view override returns (IAuthorizer) {
         return _authorizer;
     }
 
-    function setRelayerApproval(
-        address sender,
-        address relayer,
-        bool approved
-    ) external override nonReentrant whenNotPaused authenticateFor(sender) {
-        _approvedRelayers[sender][relayer] = approved;
-        emit RelayerApprovalChanged(relayer, sender, approved);
-    }
+    // function setRelayerApproval(
+    //     address sender,
+    //     address relayer,
+    //     bool approved
+    // ) external override nonReentrant whenNotPaused authenticateFor(sender) {
+    //     _approvedRelayers[sender][relayer] = approved;
+    //     // emit RelayerApprovalChanged(relayer, sender, approved);
+    // }
 
-    function hasApprovedRelayer(address user, address relayer) external view override returns (bool) {
-        return _hasApprovedRelayer(user, relayer);
-    }
+    // function hasApprovedRelayer(address user, address relayer) external view override returns (bool) {
+    //     return _hasApprovedRelayer(user, relayer);
+    // }
 
     /**
      * @dev Reverts unless `user` is the caller, or the caller is approved by the Authorizer to call the entry point
@@ -112,25 +113,25 @@ abstract contract VaultAuthorization is
      *  a) `user` approved the caller as a relayer (via `setRelayerApproval`), or
      *  b) a valid signature from them was appended to the calldata.
      */
-    function _authenticateFor(address user) internal {
-        if (msg.sender != user) {
-            // In this context, 'permission to call a function' means 'being a relayer for a function'.
-            _authenticateCaller();
+    // function _authenticateFor(address user) internal {
+    //     if (msg.sender != user) {
+    //         // In this context, 'permission to call a function' means 'being a relayer for a function'.
+    //         _authenticateCaller();
 
-            // Being a relayer is not sufficient: `user` must have also approved the caller either via
-            // `setRelayerApproval`, or by providing a signature appended to the calldata.
-            if (!_hasApprovedRelayer(user, msg.sender)) {
-                _validateExtraCalldataSignature(user, Errors.USER_DOESNT_ALLOW_RELAYER);
-            }
-        }
-    }
+    //         // Being a relayer is not sufficient: `user` must have also approved the caller either via
+    //         // `setRelayerApproval`, or by providing a signature appended to the calldata.
+    //         // if (!_hasApprovedRelayer(user, msg.sender)) {
+    //         //     _validateExtraCalldataSignature(user, Errors.USER_DOESNT_ALLOW_RELAYER);
+    //         // }
+    //     }
+    // }
 
     /**
      * @dev Returns true if `user` approved `relayer` to act as a relayer for them.
      */
-    function _hasApprovedRelayer(address user, address relayer) internal view returns (bool) {
-        return _approvedRelayers[user][relayer];
-    }
+    // function _hasApprovedRelayer(address user, address relayer) internal view returns (bool) {
+    //     return _approvedRelayers[user][relayer];
+    // }
 
     function _canPerform(bytes32 actionId, address user) internal view override returns (bool) {
         // Access control is delegated to the Authorizer.

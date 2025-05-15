@@ -81,10 +81,16 @@ export default class WeightedPool extends BaseWeightedPool {
   static async _deployFromFactory(params: WeightedPoolDeployment, vault: Vault): Promise<Contract> {
     // Note that we only support asset managers with the standalone deploy method.
 
-    const { tokens, weights, rateProviders, swapFeePercentage, owner, from } = params;
-
+    const { tokens, weights, rateProviders, swapFeePercentage, owner, from, authorizer, rwaRegistry } = params;
     const factory = await deploy('v2-pool-weighted/WeightedPoolFactory', {
-      args: [vault.address, vault.getFeesProvider().address, PAUSE_WINDOW_DURATION, BUFFER_PERIOD_DURATION],
+      args: [
+        vault.address,
+        vault.getFeesProvider().address,
+        PAUSE_WINDOW_DURATION,
+        BUFFER_PERIOD_DURATION,
+        authorizer,
+        rwaRegistry,
+      ],
       from,
     });
 

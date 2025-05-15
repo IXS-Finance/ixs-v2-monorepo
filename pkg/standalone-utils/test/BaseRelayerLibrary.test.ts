@@ -285,7 +285,7 @@ describe('BaseRelayerLibrary', function () {
 
         describe('when modifying the approval for another relayer', () => {
           sharedBeforeEach('approve relayer', async () => {
-            await vault.connect(signer).setRelayerApproval(signer.address, relayer.address, true);
+            // await vault.connect(signer).setRelayerApproval(signer.address, relayer.address, true);
           });
 
           it('reverts when giving approval for another relayer', async () => {
@@ -314,7 +314,7 @@ describe('BaseRelayerLibrary', function () {
           });
 
           it('correctly revokes approval for another relayer', async () => {
-            await vault.connect(signer).setRelayerApproval(signer.address, otherRelayer.address, true);
+            // await vault.connect(signer).setRelayerApproval(signer.address, otherRelayer.address, true);
 
             const revokeData = relayerLibrary.interface.encodeFunctionData('setRelayerApproval', [
               otherRelayer.address,

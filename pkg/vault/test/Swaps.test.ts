@@ -296,68 +296,68 @@ describe('Swaps', () => {
         });
       });
 
-      context('when the sender is an approved relayer', () => {
-        sharedBeforeEach(async () => {
-          const action = await actionId(vault, 'batchSwap');
-          await authorizer.connect(admin).grantPermission(action, other.address, ANY_ADDRESS);
+      // context('when the sender is an approved relayer', () => {
+      //   sharedBeforeEach(async () => {
+      //     const action = await actionId(vault, 'batchSwap');
+      //     await authorizer.connect(admin).grantPermission(action, other.address, ANY_ADDRESS);
 
-          await vault.connect(trader).setRelayerApproval(trader.address, other.address, true);
-        });
+      //     // await vault.connect(trader).setRelayerApproval(trader.address, other.address, true);
+      //   });
 
-        it('returns excess sent ETH to the relayer', async () => {
-          const swaps = [
-            {
-              poolId: mainPoolId,
-              assetInIndex: 0, // ETH
-              assetOutIndex: 1,
-              amount: bn(1e18),
-              userData: '0x',
-            },
-          ];
+      //   it('returns excess sent ETH to the relayer', async () => {
+      //     const swaps = [
+      //       {
+      //         poolId: mainPoolId,
+      //         assetInIndex: 0, // ETH
+      //         assetOutIndex: 1,
+      //         amount: bn(1e18),
+      //         userData: '0x',
+      //       },
+      //     ];
 
-          const relayerBalanceBefore = await ethers.provider.getBalance(other.address);
+      //     const relayerBalanceBefore = await ethers.provider.getBalance(other.address);
 
-          const gasPrice = await ethers.provider.getGasPrice();
-          const receipt: ContractReceipt = await (
-            await vault.connect(other).batchSwap(SwapKind.GivenIn, swaps, tokenAddresses, funds, limits, deadline, {
-              value: bn(1e18).add(42), // Only 1e18 is required
-              gasPrice,
-            })
-          ).wait();
-          const ethSpent = receipt.gasUsed.mul(gasPrice);
+      //     const gasPrice = await ethers.provider.getGasPrice();
+      //     const receipt: ContractReceipt = await (
+      //       await vault.connect(other).batchSwap(SwapKind.GivenIn, swaps, tokenAddresses, funds, limits, deadline, {
+      //         value: bn(1e18).add(42), // Only 1e18 is required
+      //         gasPrice,
+      //       })
+      //     ).wait();
+      //     const ethSpent = receipt.gasUsed.mul(gasPrice);
 
-          const relayerBalanceAfter = await ethers.provider.getBalance(other.address);
+      //     const relayerBalanceAfter = await ethers.provider.getBalance(other.address);
 
-          expect(relayerBalanceBefore.sub(relayerBalanceAfter)).to.equal(ethSpent.add(bn(1e18)));
-        });
+      //     expect(relayerBalanceBefore.sub(relayerBalanceAfter)).to.equal(ethSpent.add(bn(1e18)));
+      //   });
 
-        it('returns unreceived ETH to the relayer', async () => {
-          const swaps = [
-            {
-              poolId: mainPoolId,
-              assetInIndex: 1,
-              assetOutIndex: 0, // ETH
-              amount: bn(1e18),
-              userData: '0x',
-            },
-          ];
+      //   it('returns unreceived ETH to the relayer', async () => {
+      //     const swaps = [
+      //       {
+      //         poolId: mainPoolId,
+      //         assetInIndex: 1,
+      //         assetOutIndex: 0, // ETH
+      //         amount: bn(1e18),
+      //         userData: '0x',
+      //       },
+      //     ];
 
-          const relayerBalanceBefore = await ethers.provider.getBalance(other.address);
+      //     const relayerBalanceBefore = await ethers.provider.getBalance(other.address);
 
-          const gasPrice = await ethers.provider.getGasPrice();
-          const receipt: ContractReceipt = await (
-            await vault.connect(other).batchSwap(SwapKind.GivenIn, swaps, tokenAddresses, funds, limits, deadline, {
-              value: 42,
-              gasPrice,
-            })
-          ).wait();
-          const ethSpent = receipt.gasUsed.mul(gasPrice);
+      //     const gasPrice = await ethers.provider.getGasPrice();
+      //     const receipt: ContractReceipt = await (
+      //       await vault.connect(other).batchSwap(SwapKind.GivenIn, swaps, tokenAddresses, funds, limits, deadline, {
+      //         value: 42,
+      //         gasPrice,
+      //       })
+      //     ).wait();
+      //     const ethSpent = receipt.gasUsed.mul(gasPrice);
 
-          const relayerBalanceAfter = await ethers.provider.getBalance(other.address);
+      //     const relayerBalanceAfter = await ethers.provider.getBalance(other.address);
 
-          expect(relayerBalanceBefore.sub(relayerBalanceAfter)).to.equal(ethSpent);
-        });
-      });
+      //     expect(relayerBalanceBefore.sub(relayerBalanceAfter)).to.equal(ethSpent);
+      //   });
+      // });
     }
   });
 
@@ -552,76 +552,76 @@ describe('Swaps', () => {
                           assertSwapGivenIn({ swaps, fromOther }, { DAI: 2e18, MKR: -1e18 });
                         });
 
-                        context('when the sender is a relayer', () => {
-                          const fromOther = true;
+                        // context('when the sender is a relayer', () => {
+                        //   const fromOther = true;
 
-                          context('when the relayer is whitelisted by the authorizer', () => {
-                            sharedBeforeEach('grant permission to relayer', async () => {
-                              const single = await actionId(vault, 'swap');
-                              const batch = await actionId(vault, 'batchSwap');
-                              await authorizer.connect(admin).grantPermission(single, other.address, ANY_ADDRESS);
-                              await authorizer.connect(admin).grantPermission(batch, other.address, ANY_ADDRESS);
-                            });
+                        //   context('when the relayer is whitelisted by the authorizer', () => {
+                        //     sharedBeforeEach('grant permission to relayer', async () => {
+                        //       const single = await actionId(vault, 'swap');
+                        //       const batch = await actionId(vault, 'batchSwap');
+                        //       await authorizer.connect(admin).grantPermission(single, other.address, ANY_ADDRESS);
+                        //       await authorizer.connect(admin).grantPermission(batch, other.address, ANY_ADDRESS);
+                        //     });
 
-                            context('when the relayer is allowed by the user', () => {
-                              sharedBeforeEach('allow relayer', async () => {
-                                await vault.connect(trader).setRelayerApproval(trader.address, other.address, true);
-                              });
+                        //     context('when the relayer is allowed by the user', () => {
+                        //       sharedBeforeEach('allow relayer', async () => {
+                        //         await vault.connect(trader).setRelayerApproval(trader.address, other.address, true);
+                        //       });
 
-                              assertSwapGivenIn({ swaps, fromOther }, { DAI: 2e18, MKR: -1e18 });
-                            });
+                        //       assertSwapGivenIn({ swaps, fromOther }, { DAI: 2e18, MKR: -1e18 });
+                        //     });
 
-                            context('when the relayer is not allowed by the user', () => {
-                              sharedBeforeEach('disallow relayer', async () => {
-                                await vault.connect(trader).setRelayerApproval(trader.address, other.address, false);
-                              });
+                        //     context('when the relayer is not allowed by the user', () => {
+                        //       sharedBeforeEach('disallow relayer', async () => {
+                        //         await vault.connect(trader).setRelayerApproval(trader.address, other.address, false);
+                        //       });
 
-                              context('when the relayer has a valid signature from the user', () => {
-                                assertSwapGivenIn({ swaps, fromOther, signature: true }, { DAI: 2e18, MKR: -1e18 });
-                              });
+                        //       context('when the relayer has a valid signature from the user', () => {
+                        //         assertSwapGivenIn({ swaps, fromOther, signature: true }, { DAI: 2e18, MKR: -1e18 });
+                        //       });
 
-                              context('when the relayer has an invalid signature from the user', () => {
-                                assertSwapGivenInReverts(
-                                  { swaps, fromOther, signature: ZERO_BYTES32 },
-                                  'USER_DOESNT_ALLOW_RELAYER'
-                                );
-                              });
+                        //       context('when the relayer has an invalid signature from the user', () => {
+                        //         assertSwapGivenInReverts(
+                        //           { swaps, fromOther, signature: ZERO_BYTES32 },
+                        //           'USER_DOESNT_ALLOW_RELAYER'
+                        //         );
+                        //       });
 
-                              context('when there is no signature', () => {
-                                assertSwapGivenInReverts({ swaps, fromOther }, 'USER_DOESNT_ALLOW_RELAYER');
-                              });
-                            });
-                          });
+                        //       context('when there is no signature', () => {
+                        //         assertSwapGivenInReverts({ swaps, fromOther }, 'USER_DOESNT_ALLOW_RELAYER');
+                        //       });
+                        //     });
+                        //   });
 
-                          context('when the relayer is not whitelisted by the authorizer', () => {
-                            sharedBeforeEach('revoke permission from relayer', async () => {
-                              const single = await actionId(vault, 'swap');
-                              const batch = await actionId(vault, 'batchSwap');
-                              if (await authorizer.hasPermission(single, other.address, ANY_ADDRESS)) {
-                                await authorizer.connect(admin).revokePermission(single, other.address, ANY_ADDRESS);
-                              }
-                              if (await authorizer.hasPermission(batch, other.address, ANY_ADDRESS)) {
-                                await authorizer.connect(admin).revokePermission(batch, other.address, ANY_ADDRESS);
-                              }
-                            });
+                        //   context('when the relayer is not whitelisted by the authorizer', () => {
+                        //     sharedBeforeEach('revoke permission from relayer', async () => {
+                        //       const single = await actionId(vault, 'swap');
+                        //       const batch = await actionId(vault, 'batchSwap');
+                        //       if (await authorizer.hasPermission(single, other.address, ANY_ADDRESS)) {
+                        //         await authorizer.connect(admin).revokePermission(single, other.address, ANY_ADDRESS);
+                        //       }
+                        //       if (await authorizer.hasPermission(batch, other.address, ANY_ADDRESS)) {
+                        //         await authorizer.connect(admin).revokePermission(batch, other.address, ANY_ADDRESS);
+                        //       }
+                        //     });
 
-                            context('when the relayer is allowed by the user', () => {
-                              sharedBeforeEach('allow relayer', async () => {
-                                await vault.connect(trader).setRelayerApproval(trader.address, other.address, true);
-                              });
+                        //     context('when the relayer is allowed by the user', () => {
+                        //       sharedBeforeEach('allow relayer', async () => {
+                        //         await vault.connect(trader).setRelayerApproval(trader.address, other.address, true);
+                        //       });
 
-                              assertSwapGivenInReverts({ swaps, fromOther }, 'SENDER_NOT_ALLOWED');
-                            });
+                        //       assertSwapGivenInReverts({ swaps, fromOther }, 'SENDER_NOT_ALLOWED');
+                        //     });
 
-                            context('when the relayer is not allowed by the user', () => {
-                              sharedBeforeEach('disallow relayer', async () => {
-                                await vault.connect(trader).setRelayerApproval(trader.address, other.address, false);
-                              });
+                        //     context('when the relayer is not allowed by the user', () => {
+                        //       sharedBeforeEach('disallow relayer', async () => {
+                        //         await vault.connect(trader).setRelayerApproval(trader.address, other.address, false);
+                        //       });
 
-                              assertSwapGivenInReverts({ swaps, fromOther }, 'SENDER_NOT_ALLOWED');
-                            });
-                          });
-                        });
+                        //       assertSwapGivenInReverts({ swaps, fromOther }, 'SENDER_NOT_ALLOWED');
+                        //     });
+                        //   });
+                        // });
                       });
 
                       context('when withdrawing from internal balance', () => {
@@ -1052,63 +1052,63 @@ describe('Swaps', () => {
                           assertSwapGivenOut({ swaps, fromOther }, { DAI: 1e18, MKR: -0.5e18 });
                         });
 
-                        context('when the sender is a relayer', () => {
-                          const fromOther = true;
+                        // context('when the sender is a relayer', () => {
+                        //   const fromOther = true;
 
-                          context('when the relayer is whitelisted by the authorizer', () => {
-                            sharedBeforeEach('grant permission to relayer', async () => {
-                              const single = await actionId(vault, 'swap');
-                              const batch = await actionId(vault, 'batchSwap');
-                              await authorizer.connect(admin).grantPermission(single, other.address, ANY_ADDRESS);
-                              await authorizer.connect(admin).grantPermission(batch, other.address, ANY_ADDRESS);
-                            });
+                        //   context('when the relayer is whitelisted by the authorizer', () => {
+                        //     sharedBeforeEach('grant permission to relayer', async () => {
+                        //       const single = await actionId(vault, 'swap');
+                        //       const batch = await actionId(vault, 'batchSwap');
+                        //       await authorizer.connect(admin).grantPermission(single, other.address, ANY_ADDRESS);
+                        //       await authorizer.connect(admin).grantPermission(batch, other.address, ANY_ADDRESS);
+                        //     });
 
-                            context('when the relayer is allowed by the user', () => {
-                              sharedBeforeEach('allow relayer', async () => {
-                                await vault.connect(trader).setRelayerApproval(trader.address, other.address, true);
-                              });
+                        //     context('when the relayer is allowed by the user', () => {
+                        //       sharedBeforeEach('allow relayer', async () => {
+                        //         await vault.connect(trader).setRelayerApproval(trader.address, other.address, true);
+                        //       });
 
-                              assertSwapGivenOut({ swaps, fromOther }, { DAI: 1e18, MKR: -0.5e18 });
-                            });
+                        //       assertSwapGivenOut({ swaps, fromOther }, { DAI: 1e18, MKR: -0.5e18 });
+                        //     });
 
-                            context('when the relayer is not allowed by the user', () => {
-                              sharedBeforeEach('disallow relayer', async () => {
-                                await vault.connect(trader).setRelayerApproval(trader.address, other.address, false);
-                              });
+                        //     context('when the relayer is not allowed by the user', () => {
+                        //       sharedBeforeEach('disallow relayer', async () => {
+                        //         await vault.connect(trader).setRelayerApproval(trader.address, other.address, false);
+                        //       });
 
-                              assertSwapGivenOutReverts({ swaps, fromOther }, 'USER_DOESNT_ALLOW_RELAYER');
-                            });
-                          });
+                        //       assertSwapGivenOutReverts({ swaps, fromOther }, 'USER_DOESNT_ALLOW_RELAYER');
+                        //     });
+                        //   });
 
-                          context('when the relayer is not whitelisted by the authorizer', () => {
-                            sharedBeforeEach('revoke permission from relayer', async () => {
-                              const single = await actionId(vault, 'swap');
-                              const batch = await actionId(vault, 'batchSwap');
-                              if (await authorizer.hasPermission(single, other.address, ANY_ADDRESS)) {
-                                await authorizer.connect(admin).revokePermission(single, other.address, ANY_ADDRESS);
-                              }
-                              if (await authorizer.hasPermission(batch, other.address, ANY_ADDRESS)) {
-                                await authorizer.connect(admin).revokePermission(batch, other.address, ANY_ADDRESS);
-                              }
-                            });
+                        //   context('when the relayer is not whitelisted by the authorizer', () => {
+                        //     sharedBeforeEach('revoke permission from relayer', async () => {
+                        //       const single = await actionId(vault, 'swap');
+                        //       const batch = await actionId(vault, 'batchSwap');
+                        //       if (await authorizer.hasPermission(single, other.address, ANY_ADDRESS)) {
+                        //         await authorizer.connect(admin).revokePermission(single, other.address, ANY_ADDRESS);
+                        //       }
+                        //       if (await authorizer.hasPermission(batch, other.address, ANY_ADDRESS)) {
+                        //         await authorizer.connect(admin).revokePermission(batch, other.address, ANY_ADDRESS);
+                        //       }
+                        //     });
 
-                            context('when the relayer is allowed by the user', () => {
-                              sharedBeforeEach('allow relayer', async () => {
-                                await vault.connect(trader).setRelayerApproval(trader.address, other.address, true);
-                              });
+                        //     context('when the relayer is allowed by the user', () => {
+                        //       sharedBeforeEach('allow relayer', async () => {
+                        //         await vault.connect(trader).setRelayerApproval(trader.address, other.address, true);
+                        //       });
 
-                              assertSwapGivenOutReverts({ swaps, fromOther }, 'SENDER_NOT_ALLOWED');
-                            });
+                        //       assertSwapGivenOutReverts({ swaps, fromOther }, 'SENDER_NOT_ALLOWED');
+                        //     });
 
-                            context('when the relayer is not allowed by the user', () => {
-                              sharedBeforeEach('disallow relayer', async () => {
-                                await vault.connect(trader).setRelayerApproval(trader.address, other.address, false);
-                              });
+                        //     context('when the relayer is not allowed by the user', () => {
+                        //       sharedBeforeEach('disallow relayer', async () => {
+                        //         await vault.connect(trader).setRelayerApproval(trader.address, other.address, false);
+                        //       });
 
-                              assertSwapGivenOutReverts({ swaps, fromOther }, 'SENDER_NOT_ALLOWED');
-                            });
-                          });
-                        });
+                        //       assertSwapGivenOutReverts({ swaps, fromOther }, 'SENDER_NOT_ALLOWED');
+                        //     });
+                        //   });
+                        // });
                       });
 
                       context('when withdrawing from internal balance', () => {

@@ -10,6 +10,7 @@ import Vault from './Vault';
 import TypesConverter from '../types/TypesConverter';
 import TokensDeployer from '../tokens/TokensDeployer';
 import { actionId } from '../misc/actions';
+import RwaRegistry from '../rwaRegistry/RwaRegistry';
 
 export default {
   async deploy(params: RawVaultDeployment): Promise<Vault> {
@@ -24,7 +25,12 @@ export default {
     // This sequence breaks the circular dependency between authorizer, vault, adaptor and entrypoint.
     // First we deploy the vault, adaptor and entrypoint with a basic authorizer.
     const basicAuthorizer = await this._deployBasicAuthorizer(admin);
-    const vault = await (mocked ? this._deployMocked : this._deployReal)(deployment, basicAuthorizer);
+    const rwaRegistry = await RwaRegistry.create({ from, authorizer: basicAuthorizer.address });
+    const vault = await (mocked ? this._deployMocked : this._deployReal)(
+      deployment,
+      basicAuthorizer,
+      rwaRegistry.instance
+    );
     const authorizerAdaptor = await this._deployAuthorizerAdaptor(vault, from);
     const adaptorEntrypoint = await this._deployAuthorizerAdaptorEntrypoint(authorizerAdaptor);
     const protocolFeeProvider = await this._deployProtocolFeeProvider(
@@ -32,21 +38,40 @@ export default {
       deployment.maxYieldValue,
       deployment.maxAUMValue
     );
+    const voter = await this._deployMockVoter();
 
-    // Then, with the entrypoint correctly deployed, we create the actual authorizer to be used and set it in the vault.
-    const authorizer = await this._deployAuthorizer(admin, adaptorEntrypoint, nextAdmin, from);
-    const setAuthorizerActionId = await actionId(vault, 'setAuthorizer');
-    await basicAuthorizer.grantRolesToMany([setAuthorizerActionId], [admin.address]);
-    await vault.connect(admin).setAuthorizer(authorizer.address);
+    let authorizer;
+    if (!params.useBasicAuthorizer) {
+      // Then, with the entrypoint correctly deployed, we create the actual authorizer to be used and set it in the vault.
+      authorizer = await this._deployAuthorizer(admin, adaptorEntrypoint, nextAdmin, from);
+      const setAuthorizerActionId = await actionId(vault, 'setAuthorizer');
+      const setAuthorizerActionIdForRwaRegistry = await actionId(rwaRegistry.instance, 'setAuthorizer');
+      await basicAuthorizer.grantRolesToMany([setAuthorizerActionId], [admin.address]);
+      await basicAuthorizer.grantRolesToMany([setAuthorizerActionIdForRwaRegistry], [admin.address]);
+      await vault.connect(admin).setAuthorizer(authorizer.address);
+      await rwaRegistry.instance.connect(admin).setAuthorizer(authorizer.address);
+    } else {
+      authorizer = basicAuthorizer;
+    }
 
-    return new Vault(mocked, vault, authorizer, authorizerAdaptor, adaptorEntrypoint, protocolFeeProvider, admin);
+    return new Vault(
+      mocked,
+      vault,
+      authorizer,
+      authorizerAdaptor,
+      rwaRegistry.instance,
+      adaptorEntrypoint,
+      protocolFeeProvider,
+      admin,
+      voter
+    );
   },
 
-  async _deployReal(deployment: VaultDeployment, authorizer: Contract): Promise<Contract> {
+  async _deployReal(deployment: VaultDeployment, authorizer: Contract, rwaRegistry: Contract): Promise<Contract> {
     const { from, pauseWindowDuration, bufferPeriodDuration } = deployment;
     const weth = await TokensDeployer.deployToken({ symbol: 'WETH' });
 
-    const args = [authorizer.address, weth.address, pauseWindowDuration, bufferPeriodDuration];
+    const args = [authorizer.address, weth.address, rwaRegistry.address, pauseWindowDuration, bufferPeriodDuration];
     return deploy('v2-vault/Vault', { args, from });
   },
 
@@ -86,5 +111,9 @@ export default {
     return deploy('v2-standalone-utils/ProtocolFeePercentagesProvider', {
       args: [vault.address, maxYieldValue, maxAUMValue],
     });
+  },
+
+  async _deployMockVoter(from?: SignerWithAddress): Promise<Contract> {
+    return deploy('v2-vault/MockVoter', { args: [], from });
   },
 };

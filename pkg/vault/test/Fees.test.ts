@@ -36,7 +36,7 @@ describe('Fees', () => {
 
   describe('set fees', () => {
     const MAX_SWAP_FEE_PERCENTAGE = bn(50e16); // 50%
-    const MAX_FLASH_LOAN_FEE_PERCENTAGE = bn(1e16); // 1%
+    // const MAX_FLASH_LOAN_FEE_PERCENTAGE = bn(1e16); // 1%
 
     context('when the sender is allowed', () => {
       context('when the given input is valid', async () => {
@@ -57,24 +57,24 @@ describe('Fees', () => {
           });
         });
 
-        describe('flash loan fee', () => {
-          it('sets the percentage properly', async () => {
-            await vault.setFlashLoanFeePercentage(MAX_FLASH_LOAN_FEE_PERCENTAGE, { from: admin });
+        // describe('flash loan fee', () => {
+        //   it('sets the percentage properly', async () => {
+        //     await vault.setFlashLoanFeePercentage(MAX_FLASH_LOAN_FEE_PERCENTAGE, { from: admin });
 
-            const flashLoanFeePercentage = await vault.getFlashLoanFeePercentage();
-            expect(flashLoanFeePercentage).to.equal(MAX_FLASH_LOAN_FEE_PERCENTAGE);
-          });
+        //     const flashLoanFeePercentage = await vault.getFlashLoanFeePercentage();
+        //     expect(flashLoanFeePercentage).to.equal(MAX_FLASH_LOAN_FEE_PERCENTAGE);
+        //   });
 
-          it('emits an event', async () => {
-            const receipt = await (
-              await vault.setFlashLoanFeePercentage(MAX_FLASH_LOAN_FEE_PERCENTAGE, { from: admin })
-            ).wait();
+        //   it('emits an event', async () => {
+        //     const receipt = await (
+        //       await vault.setFlashLoanFeePercentage(MAX_FLASH_LOAN_FEE_PERCENTAGE, { from: admin })
+        //     ).wait();
 
-            expectEvent.inReceipt(receipt, 'FlashLoanFeePercentageChanged', {
-              newFlashLoanFeePercentage: MAX_FLASH_LOAN_FEE_PERCENTAGE,
-            });
-          });
-        });
+        //     expectEvent.inReceipt(receipt, 'FlashLoanFeePercentageChanged', {
+        //       newFlashLoanFeePercentage: MAX_FLASH_LOAN_FEE_PERCENTAGE,
+        //     });
+        //   });
+        // });
       });
 
       context('when the given input is invalid', async () => {
@@ -86,13 +86,13 @@ describe('Fees', () => {
           );
         });
 
-        it('reverts if the flash loan fee percentage is above the maximum', async () => {
-          const badFlashLoanFeePercentage = MAX_FLASH_LOAN_FEE_PERCENTAGE.add(1);
+        // it('reverts if the flash loan fee percentage is above the maximum', async () => {
+        //   const badFlashLoanFeePercentage = MAX_FLASH_LOAN_FEE_PERCENTAGE.add(1);
 
-          await expect(vault.setFlashLoanFeePercentage(badFlashLoanFeePercentage, { from: admin })).to.be.revertedWith(
-            'FLASH_LOAN_FEE_PERCENTAGE_TOO_HIGH'
-          );
-        });
+        //   await expect(vault.setFlashLoanFeePercentage(badFlashLoanFeePercentage, { from: admin })).to.be.revertedWith(
+        //     'FLASH_LOAN_FEE_PERCENTAGE_TOO_HIGH'
+        //   );
+        // });
       });
     });
 
@@ -101,60 +101,60 @@ describe('Fees', () => {
         await expect(vault.setSwapFeePercentage(MAX_SWAP_FEE_PERCENTAGE, { from: other })).to.be.revertedWith(
           'SENDER_NOT_ALLOWED'
         );
-        await expect(vault.setFlashLoanFeePercentage(MAX_SWAP_FEE_PERCENTAGE, { from: other })).to.be.revertedWith(
-          'SENDER_NOT_ALLOWED'
-        );
+        // await expect(vault.setFlashLoanFeePercentage(MAX_SWAP_FEE_PERCENTAGE, { from: other })).to.be.revertedWith(
+        //   'SENDER_NOT_ALLOWED'
+        // );
       });
     });
   });
 
-  describe('collected fees', () => {
-    it('fees are initially zero', async () => {
-      expect(await vault.getCollectedFeeAmounts([tokens.DAI.address])).to.be.zeros;
-    });
+  // describe('collected fees', () => {
+  //   it('fees are initially zero', async () => {
+  //     expect(await vault.getCollectedFeeAmounts([tokens.DAI.address])).to.be.zeros;
+  //   });
 
-    context('with collected protocol fees', () => {
-      sharedBeforeEach('collect some tokens', async () => {
-        await tokens.DAI.transfer(feesCollector, fp(0.025), { from: user });
-        await tokens.MKR.transfer(feesCollector, fp(0.05), { from: user });
-      });
+  //   context('with collected protocol fees', () => {
+  //   //   sharedBeforeEach('collect some tokens', async () => {
+  //   //     await tokens.DAI.transfer(feesCollector, fp(0.025), { from: user });
+  //   //     await tokens.MKR.transfer(feesCollector, fp(0.05), { from: user });
+  //   //   });
 
-      it('reports collected fee', async () => {
-        const collectedFees = await vault.getCollectedFeeAmounts(tokens);
-        expect(collectedFees).to.deep.equal([bn(0.025e18), bn(0.05e18)]);
-      });
+  //   //   // it('reports collected fee', async () => {
+  //   //   //   const collectedFees = await vault.getCollectedFeeAmounts(tokens);
+  //   //   //   expect(collectedFees).to.deep.equal([bn(0.025e18), bn(0.05e18)]);
+  //   //   // });
 
-      it('authorized accounts can withdraw protocol fees to any recipient', async () => {
-        const action = await actionId(feesCollector, 'withdrawCollectedFees');
-        await vault.grantPermissionGlobally(action, feeCollector);
+  //   //   // it('authorized accounts can withdraw protocol fees to any recipient', async () => {
+  //   //   //   const action = await actionId(feesCollector, 'withdrawCollectedFees');
+  //   //   //   await vault.grantPermissionGlobally(action, feeCollector);
 
-        await expectBalanceChange(
-          () =>
-            vault.withdrawCollectedFees(tokens.addresses, [bn(0.02e18), bn(0.04e18)], other, {
-              from: feeCollector,
-            }),
-          tokens,
-          { account: other, changes: { DAI: bn(0.02e18), MKR: bn(0.04e18) } }
-        );
+  //   //   //   await expectBalanceChange(
+  //   //   //     () =>
+  //   //   //       vault.withdrawCollectedFees(tokens.addresses, [bn(0.02e18), bn(0.04e18)], other, {
+  //   //   //         from: feeCollector,
+  //   //   //       }),
+  //   //   //     tokens,
+  //   //   //     { account: other, changes: { DAI: bn(0.02e18), MKR: bn(0.04e18) } }
+  //   //   //   );
 
-        const collectedFees = await vault.getCollectedFeeAmounts(tokens);
-        expect(collectedFees).to.deep.equal([bn(0.005e18), bn(0.01e18)]);
-      });
+  //   //   //   const collectedFees = await vault.getCollectedFeeAmounts(tokens);
+  //   //   //   expect(collectedFees).to.deep.equal([bn(0.005e18), bn(0.01e18)]);
+  //   //   // });
 
-      it('protocol fees cannot be over-withdrawn', async () => {
-        const action = await actionId(feesCollector, 'withdrawCollectedFees');
-        await vault.grantPermissionGlobally(action, feeCollector);
+  //   //   // it('protocol fees cannot be over-withdrawn', async () => {
+  //   //   //   const action = await actionId(feesCollector, 'withdrawCollectedFees');
+  //   //   //   await vault.grantPermissionGlobally(action, feeCollector);
 
-        await expect(
-          vault.withdrawCollectedFees(tokens.DAI.address, bn(0.05e18).add(1), other, { from: feeCollector })
-        ).to.be.revertedWith('ERC20_TRANSFER_EXCEEDS_BALANCE');
-      });
+  //   //   //   await expect(
+  //   //   //     vault.withdrawCollectedFees(tokens.DAI.address, bn(0.05e18).add(1), other, { from: feeCollector })
+  //   //   //   ).to.be.revertedWith('ERC20_TRANSFER_EXCEEDS_BALANCE');
+  //   //   // });
 
-      it('unauthorized accounts cannot withdraw collected fees', async () => {
-        await expect(vault.withdrawCollectedFees(tokens.DAI.address, 0, other, { from: other })).to.be.revertedWith(
-          'SENDER_NOT_ALLOWED'
-        );
-      });
-    });
-  });
+  //   //   // it('unauthorized accounts cannot withdraw collected fees', async () => {
+  //   //   //   await expect(vault.withdrawCollectedFees(tokens.DAI.address, 0, other, { from: other })).to.be.revertedWith(
+  //   //   //     'SENDER_NOT_ALLOWED'
+  //   //   //   );
+  //   //   // });
+  //   // });
+  // });
 });

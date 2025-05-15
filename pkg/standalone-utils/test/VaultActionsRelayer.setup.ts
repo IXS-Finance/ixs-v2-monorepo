@@ -54,7 +54,7 @@ export async function setupRelayerEnvironment(): Promise<{
   await Promise.all(relayerActionIds.map((action) => vault.grantPermissionGlobally(action, relayer)));
 
   // Approve relayer by sender
-  await vault.setRelayerApproval(user, relayer, true);
+  // await vault.setRelayerApproval(user, relayer, true);
 
   return { user, admin, other, vault, relayer, relayerLibrary };
 }

@@ -24,6 +24,8 @@ import "./IAsset.sol";
 import "./IAuthorizer.sol";
 import "./IFlashLoanRecipient.sol";
 import "./IProtocolFeesCollector.sol";
+import "./RwaDataTypes.sol";
+import "./IPoolFees.sol";
 
 pragma solidity >=0.7.0 <0.9.0;
 
@@ -87,23 +89,23 @@ interface IVault is ISignaturesValidator, ITemporarilyPausable, IAuthentication 
     /**
      * @dev Returns true if `user` has approved `relayer` to act as a relayer for them.
      */
-    function hasApprovedRelayer(address user, address relayer) external view returns (bool);
+    // function hasApprovedRelayer(address user, address relayer) external view returns (bool);
 
-    /**
-     * @dev Allows `relayer` to act as a relayer for `sender` if `approved` is true, and disallows it otherwise.
-     *
-     * Emits a `RelayerApprovalChanged` event.
-     */
-    function setRelayerApproval(
-        address sender,
-        address relayer,
-        bool approved
-    ) external;
+    // /**
+    //  * @dev Allows `relayer` to act as a relayer for `sender` if `approved` is true, and disallows it otherwise.
+    //  *
+    //  * Emits a `RelayerApprovalChanged` event.
+    //  */
+    // function setRelayerApproval(
+    //     address sender,
+    //     address relayer,
+    //     bool approved
+    // ) external;
 
     /**
      * @dev Emitted every time a relayer is approved or disapproved by `setRelayerApproval`.
      */
-    event RelayerApprovalChanged(address indexed relayer, address indexed sender, bool approved);
+    // event RelayerApprovalChanged(address indexed relayer, address indexed sender, bool approved);
 
     // Internal Balance
     //
@@ -517,6 +519,14 @@ interface IVault is ISignaturesValidator, ITemporarilyPausable, IAuthentication 
         uint256 deadline
     ) external payable returns (uint256);
 
+    // function rwaSwap(
+    //     SingleSwap memory singleSwap,
+    //     FundManagement memory funds,
+    //     uint256 limit,
+    //     uint256 deadline,
+    //     RwaDataTypes.RwaAuthorizationData calldata authorization
+    // ) external payable returns (uint256);
+
     /**
      * @dev Data for a single swap executed by `swap`. `amount` is either `amountIn` or `amountOut` depending on
      * the `kind` value.
@@ -572,6 +582,16 @@ interface IVault is ISignaturesValidator, ITemporarilyPausable, IAuthentication 
         FundManagement memory funds,
         int256[] memory limits,
         uint256 deadline
+    ) external payable returns (int256[] memory);
+
+    function rwaBatchSwap(
+        SwapKind kind,
+        BatchSwapStep[] memory swaps,
+        IAsset[] memory assets,
+        FundManagement memory funds,
+        int256[] memory limits,
+        uint256 deadline,
+        RwaDataTypes.RwaAuthorizationData calldata authorization
     ) external payable returns (int256[] memory);
 
     /**
@@ -663,17 +683,17 @@ interface IVault is ISignaturesValidator, ITemporarilyPausable, IAuthentication 
      *
      * Emits `FlashLoan` events.
      */
-    function flashLoan(
-        IFlashLoanRecipient recipient,
-        IERC20[] memory tokens,
-        uint256[] memory amounts,
-        bytes memory userData
-    ) external;
+    // function flashLoan(
+    //     IFlashLoanRecipient recipient,
+    //     IERC20[] memory tokens,
+    //     uint256[] memory amounts,
+    //     bytes memory userData
+    // ) external;
 
     /**
      * @dev Emitted for each individual flash loan performed by `flashLoan`.
      */
-    event FlashLoan(IFlashLoanRecipient indexed recipient, IERC20 indexed token, uint256 amount, uint256 feeAmount);
+    // event FlashLoan(IFlashLoanRecipient indexed recipient, IERC20 indexed token, uint256 amount, uint256 feeAmount);
 
     // Asset Management
     //
@@ -769,4 +789,14 @@ interface IVault is ISignaturesValidator, ITemporarilyPausable, IAuthentication 
      */
     function WETH() external view returns (IWETH);
     // solhint-disable-previous-line func-name-mixedcase
+
+    /**
+     * @dev Return address of Pool Fee collector contract
+     */
+    function getPoolFeesCollector() external view returns (IPoolFees);
+
+    /**
+     * @dev Return index ratio
+     */
+    // function getIndexRatio(bytes32 _poolId, address _token) external view returns (uint256);
 }
