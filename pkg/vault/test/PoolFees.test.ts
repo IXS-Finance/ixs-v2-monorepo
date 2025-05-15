@@ -172,31 +172,27 @@ describe('Pool Fees', () => {
           const [poolAddress] = (await vault.getPool(mainPoolId)) as [string, unknown];
           await voter.connect(admin).setGauge(poolAddress, mockGauge.address);
 
-          const ratio_before = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
+          const ratio_before = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.WETH.address);
+
           expect(ratio_before).to.be.equal(bn(0));
           await vault
             .connect(sender)
             .batchSwap(SwapKind.GivenIn, swaps, tokenAddresses, funds, limits, deadline, { value: bn(1e18) });
 
-          const ratioWETH = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
-          expect(ratioWETH).to.be.equal(bn(3e9)); // (3e15 * 1e18) / (1e6 * 1e18)
-          const ratioDAI = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.DAI.address);
+          const ratioWETH = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.WETH.address);
+          expect(ratioWETH).to.be.equal(bn(3e15)); // (3e15 * 1e18) / (1e6 * 1e18)
+          const ratioDAI = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.DAI.address);
           expect(ratioDAI).to.be.equal(bn(0));
 
-          await expect(poolFeesCollector.connect(mockGauge).claimPoolTokensFees(mainPoolId, lp.address))
+          await expect(poolFeesCollector.connect(mockGauge).claimPoolTokensFees(mainPoolId, mockGauge.address))
+
             .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
-            .withArgs(mainPoolId, tokens.WETH.address, bn(3e14), lp.address); // 3e9 * 1e5 * 1e18 / 1e18
+            .withArgs(mainPoolId, tokens.WETH.address, bn(3e15), mockGauge.address); // 3e9 * 1e5 * 1e18 / 1e18
 
           // after claiming, claimable amount should be 0
-          const claimableAmount = await poolFeesCollector.claimable(lp.address, mainPoolId, tokens.WETH.address);
+          const claimableAmount = await poolFeesCollector.feesAmounts(mainPoolId, tokens.WETH.address);
           expect(claimableAmount).to.be.equal(bn(0));
 
-          // test supplyIndex
-          const WETHsupplyIndex = await poolFeesCollector.supplyIndex(mockGauge.address, mainPoolId, tokens.WETH.address);
-          expect(WETHsupplyIndex).to.be.equal(ratioWETH);
-
-          const DAIsupplyIndex = await poolFeesCollector.supplyIndex(mockGauge.address, mainPoolId, tokens.DAI.address);
-          expect(DAIsupplyIndex).to.be.equal(ratioDAI);
         });
 
         it('Claim pool token fee after a multiple swap with the same tokenIn', async () => {
@@ -221,30 +217,24 @@ describe('Pool Fees', () => {
           await poolFeesCollector.connect(other).setVoter(voter.address);
           const [poolAddress] = (await vault.getPool(mainPoolId)) as [string, unknown];
           await voter.connect(admin).setGauge(poolAddress, mockGauge.address);
-          const ratio_before = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
+          const ratio_before = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.WETH.address);
+
           expect(ratio_before).to.be.equal(bn(0));
           await vault
             .connect(sender)
             .batchSwap(SwapKind.GivenIn, swaps, tokenAddresses, funds, limits, deadline, { value: bn(1e18) });
-          const ratioWETH = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
-          expect(ratioWETH).to.be.equal(bn(3e9)); // (3e15 * 1e18) / (1e6 * 1e18)
-          const ratioDAI = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.DAI.address);
+          const ratioWETH = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.WETH.address);
+          expect(ratioWETH).to.be.equal(bn(3e15)); // (3e15 * 1e18) / (1e6 * 1e18)
+          const ratioDAI = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.DAI.address);
           expect(ratioDAI).to.be.equal(bn(0));
-
-          await expect(poolFeesCollector.connect(mockGauge).claimPoolTokensFees(mainPoolId, lp.address))
+          
+          await expect(poolFeesCollector.connect(mockGauge).claimPoolTokensFees(mainPoolId, mockGauge.address))
             .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
-            .withArgs(mainPoolId, tokens.WETH.address, bn(3e14), lp.address); // 6e9 * 1e5 * 1e18 / 1e18
+            .withArgs(mainPoolId, tokens.WETH.address, bn(3e15), mockGauge.address); // 6e9 * 1e5 * 1e18 / 1e18
           
           // after claiming, claimable amount should be 0
-          const claimableAmount = await poolFeesCollector.claimable(lp.address, mainPoolId, tokens.WETH.address);
+          const claimableAmount = await poolFeesCollector.feesAmounts(mainPoolId, tokens.WETH.address);
           expect(claimableAmount).to.be.equal(bn(0));
-
-          // test supplyIndex
-          const WETHsupplyIndex = await poolFeesCollector.supplyIndex(mockGauge.address, mainPoolId, tokens.WETH.address);
-          expect(WETHsupplyIndex).to.be.equal(ratioWETH);
-
-          const DAIsupplyIndex = await poolFeesCollector.supplyIndex(mockGauge.address, mainPoolId, tokens.DAI.address);
-          expect(DAIsupplyIndex).to.be.equal(ratioDAI);
         });
 
         it('Claim pool token fee after multiple swaps with different tokenIn', async () => {
@@ -269,34 +259,150 @@ describe('Pool Fees', () => {
           await poolFeesCollector.connect(other).setVoter(voter.address);
           const [poolAddress] = (await vault.getPool(mainPoolId)) as [string, unknown];
           await voter.connect(admin).setGauge(poolAddress, mockGauge.address);
-          const ratio_before = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
+          const ratio_before = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.WETH.address);
           expect(ratio_before).to.be.equal(bn(0));
           await vault
             .connect(sender)
             .batchSwap(SwapKind.GivenIn, swaps, tokenAddresses, funds, limits, deadline, { value: bn(1e18) });
-          const ratioWETH = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.WETH.address);
-          expect(ratioWETH).to.be.equal(bn(3e9)); // (3e15 * 1e18) / (1e6 * 1e18)
-          const ratioDAI = await poolFeesCollector.getIndexRatio(mainPoolId, tokens.DAI.address);
-          expect(ratioDAI).to.be.equal(bn(3e9));
+          const ratioWETH = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.WETH.address);
+          expect(ratioWETH).to.be.equal(bn(3e15)); // (3e15 * 1e18) / (1e6 * 1e18)
+          const ratioDAI = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.DAI.address);
+          expect(ratioDAI).to.be.equal(bn(3e15));
 
-          await expect(poolFeesCollector.connect(mockGauge).claimPoolTokensFees(mainPoolId, lp.address))
+          await expect(poolFeesCollector.connect(mockGauge).claimPoolTokensFees(mainPoolId, mockGauge.address))
             .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
-            .withArgs(mainPoolId, tokens.WETH.address, bn(3e14), lp.address)
+            .withArgs(mainPoolId, tokens.WETH.address, bn(3e15), mockGauge.address)
             .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
-            .withArgs(mainPoolId, tokens.DAI.address, bn(3e14), lp.address);
+            .withArgs(mainPoolId, tokens.DAI.address, bn(3e15), mockGauge.address);
           
           // after claiming, claimable amount should be 0
-          const claimableWETHAmount = await poolFeesCollector.claimable(lp.address, mainPoolId, tokens.WETH.address);
+          const claimableWETHAmount = await poolFeesCollector.feesAmounts(mainPoolId, tokens.WETH.address);
           expect(claimableWETHAmount).to.be.equal(bn(0));
           
-          const claimabledAIAmount = await poolFeesCollector.claimable(lp.address, mainPoolId, tokens.DAI.address);
+          const claimabledAIAmount = await poolFeesCollector.feesAmounts(mainPoolId, tokens.DAI.address);
           expect(claimabledAIAmount).to.be.equal(bn(0));
-          // test supplyIndex
-          const WETHsupplyIndex = await poolFeesCollector.supplyIndex(mockGauge.address, mainPoolId, tokens.WETH.address);
-          expect(WETHsupplyIndex).to.be.equal(ratioWETH);
+        });
 
-          const DAIsupplyIndex = await poolFeesCollector.supplyIndex(mockGauge.address, mainPoolId, tokens.DAI.address);
-          expect(DAIsupplyIndex).to.be.equal(ratioDAI);
+        it('updateFeeAmount multiple times', async () => {
+          const swaps1 = [
+            {
+              poolId: mainPoolId,
+              assetInIndex: 0, // ETH
+              assetOutIndex: 1,
+              amount: bn(1e18),
+              userData: '0x',
+            },
+          ];
+
+          const swaps2 = [
+            {
+              poolId: mainPoolId,
+              assetInIndex: 0, // ETH
+              assetOutIndex: 1,
+              amount: bn(2e18),
+              userData: '0x',
+            },
+          ];
+          const action = generateActionId('setVoter(address)', poolFeesCollector.address);
+          await authorizer.connect(admin).grantPermission(action, other.address, ANY_ADDRESS);
+          await poolFeesCollector.connect(other).setVoter(voter.address);
+          const [poolAddress] = (await vault.getPool(mainPoolId)) as [string, unknown];
+          await voter.connect(admin).setGauge(poolAddress, mockGauge.address);
+
+          const ratio_before = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.WETH.address);
+
+          expect(ratio_before).to.be.equal(bn(0));
+          await vault
+            .connect(sender)
+            .batchSwap(SwapKind.GivenIn, swaps1, tokenAddresses, funds, limits, deadline, { value: bn(1e18) });
+
+          const ratioWETH = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.WETH.address);
+          expect(ratioWETH).to.be.equal(bn(3e15)); // (3e15 * 1e18) / (1e6 * 1e18)
+          const ratioDAI = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.DAI.address);
+          expect(ratioDAI).to.be.equal(bn(0));
+
+          await vault
+            .connect(sender)
+            .batchSwap(SwapKind.GivenIn, swaps2, tokenAddresses, funds, limits, deadline, { value: bn(2e18) });
+          const ratioWETH2 = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.WETH.address);
+          expect(ratioWETH2).to.be.equal(bn(9e15)); // (3e15 * 1e18) / (1e6 * 1e18)
+
+          await expect(poolFeesCollector.connect(mockGauge).claimPoolTokensFees(mainPoolId, mockGauge.address))
+
+            .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
+            .withArgs(mainPoolId, tokens.WETH.address, bn(9e15), mockGauge.address); // 3e9 * 1e5 * 1e18 / 1e18
+
+          // after claiming, claimable amount should be 0
+          const claimableAmount = await poolFeesCollector.feesAmounts(mainPoolId, tokens.WETH.address);
+          expect(claimableAmount).to.be.equal(bn(0));
+        });
+
+        it('updateFeeAmount multiple times then claim then updateFeeAmount again', async () => {
+          const swaps1 = [
+            {
+              poolId: mainPoolId,
+              assetInIndex: 0, // ETH
+              assetOutIndex: 1,
+              amount: bn(1e18),
+              userData: '0x',
+            },
+          ];
+          const swaps2 = [
+            {
+              poolId: mainPoolId,
+              assetInIndex: 0, // ETH
+              assetOutIndex: 1,
+              amount: bn(2e18),
+              userData: '0x',
+            },
+          ];
+          const swaps3 = [
+            {
+              poolId: mainPoolId,
+              assetInIndex: 0, // ETH
+              assetOutIndex: 1,
+              amount: bn(3e18),
+              userData: '0x',
+            },
+          ];
+
+          const action = generateActionId('setVoter(address)', poolFeesCollector.address);
+          await authorizer.connect(admin).grantPermission(action, other.address, ANY_ADDRESS);
+          await poolFeesCollector.connect(other).setVoter(voter.address);
+          const [poolAddress] = (await vault.getPool(mainPoolId)) as [string, unknown];
+          await voter.connect(admin).setGauge(poolAddress, mockGauge.address);
+
+          const ratio_before = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.WETH.address);
+
+          expect(ratio_before).to.be.equal(bn(0));
+          await vault
+            .connect(sender)
+            .batchSwap(SwapKind.GivenIn, swaps1, tokenAddresses, funds, limits, deadline, { value: bn(1e18) });
+
+          const ratioWETH = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.WETH.address);
+          expect(ratioWETH).to.be.equal(bn(3e15)); // (3e15 * 1e18) / (1e6 * 1e18)
+          const ratioDAI = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.DAI.address);
+          expect(ratioDAI).to.be.equal(bn(0));
+
+          await vault
+            .connect(sender)
+            .batchSwap(SwapKind.GivenIn, swaps2, tokenAddresses, funds, limits, deadline, { value: bn(2e18) });
+          const ratioWETH2 = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.WETH.address);
+          expect(ratioWETH2).to.be.equal(bn(9e15)); // (3e15 * 1e18) / (1e6 * 1e18)
+
+          await expect(poolFeesCollector.connect(mockGauge).claimPoolTokensFees(mainPoolId, mockGauge.address))
+
+            .to.emit(poolFeesCollector, 'ClaimPoolTokenFees')
+            .withArgs(mainPoolId, tokens.WETH.address, bn(9e15), mockGauge.address);
+
+          // after claiming, claimable amount should be 0
+          const claimableAmount = await poolFeesCollector.feesAmounts(mainPoolId, tokens.WETH.address);
+          expect(claimableAmount).to.be.equal(bn(0));
+          await vault
+            .connect(sender)
+            .batchSwap(SwapKind.GivenIn, swaps3, tokenAddresses, funds, limits, deadline, { value: bn(3e18) });
+          const ratioWETH3 = await poolFeesCollector.getFeesAmounts(mainPoolId, tokens.WETH.address);
+          expect(ratioWETH3).to.be.equal(bn(9e15));
         });
 
         it('received ETH is wrapped into WETH', async () => {
@@ -512,7 +618,7 @@ describe('Pool Fees', () => {
   it('Can not call update Ratio with invalid poolId', async () => {
     const invalidPoolId = ethers.utils.formatBytes32String('INVALID_POOL_ID');
     await expect(
-      poolFeesCollector.connect(lp).updateRatio(invalidPoolId, tokens.WETH.address, 1e15)
+      poolFeesCollector.connect(lp).updateFeeAmount(invalidPoolId, tokens.WETH.address, 1e15)
     ).to.be.revertedWith('INVALID_POOL_ID');
   });
   
@@ -585,7 +691,7 @@ describe('Pool Fees', () => {
     deployMainPool(specialization, tokenSymbols);
 
     it('Can not call update Ratio with invalid sender except pool address or vault', async () => {
-      await expect(poolFeesCollector.connect(lp).updateRatio(mainPoolId, tokens.WETH.address, 1e15)).to.be.revertedWith(
+      await expect(poolFeesCollector.connect(lp).updateFeeAmount(mainPoolId, tokens.WETH.address, 1e15)).to.be.revertedWith(
         'only allowed for pool or vault'
       );
     });

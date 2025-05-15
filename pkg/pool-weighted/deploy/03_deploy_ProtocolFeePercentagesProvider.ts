@@ -21,6 +21,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
 
   console.log('ProtocolFeePercentagesProvider deployed to:', protocolFeePercentagesProvider.address);
+  await new Promise((res) => setTimeout(res, 30000));
+
+  try {
+    console.log('Verifying ProtocolFeePercentagesProvider...');
+    await hre.run('verify:verify', {
+      address: protocolFeePercentagesProvider.address,
+      constructorArguments: [vault.address, MAX_YIELD_VALUE, MAX_AUM_VALUE],
+    });
+    console.log('Verified ProtocolFeePercentagesProvider');
+  } catch (error) {
+    console.error('Verification failed:', error);
+  }
 };
 
 export default func;

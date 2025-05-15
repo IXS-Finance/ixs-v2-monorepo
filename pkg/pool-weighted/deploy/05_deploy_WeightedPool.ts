@@ -35,19 +35,20 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const testToken1Code = await ethers.provider.getCode(testToken1.address);
   const testToken2Code = await ethers.provider.getCode(testToken2.address);
 
-  if (testToken1Code === '0x') {
-    throw new Error(`TestToken1 contract not found at address: ${testToken1.address}`);
-  }
+  // if (testToken1Code === '0x') {
+  //   throw new Error(`TestToken1 contract not found at address: ${testToken1.address}`);
+  // }
 
-  if (testToken2Code === '0x') {
-    throw new Error(`TestToken2 contract not found at address: ${testToken2.address}`);
-  }
+  // if (testToken2Code === '0x') {
+  //   throw new Error(`TestToken2 contract not found at address: ${testToken2.address}`);
+  // }
 
   // Pool Parameters
   const poolParams = {
     name: TOKEN_NAME,
     symbol: TOKEN_SYMBOL,
-    tokens: [testToken1.address, testToken2.address], // Use deployed token addresses
+    // tokens: [testToken1.address, testToken2.address], // Use deployed token addresses
+    tokens: ['0x142953B2F88D0939FD9f48F4bFfa3A2BFa21e4F8', '0xA9c2c7D5E9bdA19bF9728384FFD3cF71Ada5dfcB'], // Use deployed token addresses
     normalizedWeights: [WEIGHT_1, WEIGHT_2],
     rateProviders: [ZERO_ADDRESS, ZERO_ADDRESS], // No rate providers
     // assetManagers are handled internally by the factory (set to ZERO_ADDRESS)
@@ -125,8 +126,38 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   }
 
   console.log('WeightedPool deployed to:', poolAddress);
+  const assetManagers: string[] = [];
+  const pauseWindowDuration = 7776000; // 3 months in seconds (90 days)
+  const bufferPeriodDuration = 2592000; // 1 month in seconds (30 days)
+
+  // Verify the WeightedPool contract
+  try {
+    console.log('Verifying WeightedPool...');
+    await hre.run('verify:verify', {
+      address: poolAddress,
+      constructorArguments: [
+        { name, symbol, tokens, normalizedWeights, rateProviders, assetManagers, swapFeePercentage },
+        // name: name,
+        // symbol: symbol,
+        // tokens: tokens,
+        // normalizedWeights: normalizedWeights,
+        // rateProviders: rateProviders,
+        // assetManagers: assetManagers,
+        // swapFeePercentage: swapFeePercentage,
+
+        vault.address,
+        protocolFeePercentagesProvider.address,
+        pauseWindowDuration,
+        bufferPeriodDuration,
+        owner,
+      ],
+    });
+    console.log('Verified WeightedPool');
+  } catch (error) {
+    console.error('Verification failed:', error);
+  }
 };
 
 export default func;
 func.tags = ['WeightedPool'];
-func.dependencies = ['TestTokens', 'Vault', 'ProtocolFeePercentagesProvider', 'WeightedPoolFactory'];
+// func.dependencies = ['TestTokens', 'Vault', 'ProtocolFeePercentagesProvider', 'WeightedPoolFactory'];

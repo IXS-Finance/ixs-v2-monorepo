@@ -27,7 +27,7 @@ import "@balancer-labs/v2-interfaces/contracts/vault/IVoter.sol";
 
 contract PoolFees is IPoolFees {
     using SafeERC20 for IERC20;
-    event UpdateRatio(bytes32 poolId, address token, uint256 feeAmount);
+    event UpdateFeesAmount(bytes32 poolId, address token, uint256 feeAmount);
     event ClaimPoolTokenFees(bytes32 poolId, address token, uint256 feeAmount, address recipient);
     event ClaimBPTFees(bytes32 poolId, address token, uint256 feeAmount, address recipient);
     event VoterChanged(address voter);
@@ -35,9 +35,8 @@ contract PoolFees is IPoolFees {
     address public vault;
     address public voter;
 
-    mapping(address => mapping(bytes32 => mapping(address => uint256))) public supplyIndex;
-    mapping(address => mapping(bytes32 => mapping(address => uint256))) public claimable;
-    mapping(bytes32 => mapping(address => uint256)) internal indexRatio;
+    // pool Id => token address => fee amount
+    mapping(bytes32 => mapping(address => uint256)) public feesAmounts;
 
     constructor(address _vault) {
         vault = _vault;
@@ -59,13 +58,12 @@ contract PoolFees is IPoolFees {
         uint[] memory claimableAmounts = new uint[](tokens.length);
 
         for (uint256 i = 0; i < tokens.length; i++) {
-            _updateSupplyIndex(msg.sender, _poolId, address(tokens[i]));
             IERC20 token = tokens[i];
-            uint256 claimableAmount = claimable[msg.sender][_poolId][address(token)];
+            uint256 claimableAmount = feesAmounts[_poolId][address(token)];
             claimableAmounts[i] = claimableAmount;
             assets[i] = address(token);
             if (claimableAmount > 0) {
-                claimable[msg.sender][_poolId][address(token)] = 0;
+                feesAmounts[_poolId][address(token)] = 0;
                 token.safeTransfer(recipient, claimableAmount);
                 emit ClaimPoolTokenFees(_poolId, address(token), claimableAmount, recipient);
             }
@@ -79,10 +77,9 @@ contract PoolFees is IPoolFees {
         IERC20[] memory tokens;
         (tokens, , ) = IVault(vault).getPoolTokens(_poolId);
 
-        _updateSupplyIndex(msg.sender, _poolId, _poolAddr);
-        uint256 claimableAmount = claimable[msg.sender][_poolId][_poolAddr];
+        uint256 claimableAmount = feesAmounts[_poolId][_poolAddr];
         if (claimableAmount > 0) {
-            claimable[msg.sender][_poolId][_poolAddr] = 0;
+            feesAmounts[_poolId][_poolAddr] = 0;
             uint256[] memory amountOuts = new uint256[](tokens.length);
             _exitPool(_poolId, recipient, _convertERC20ToIAsset(tokens), amountOuts, claimableAmount, false);
             emit ClaimBPTFees(_poolId, _poolAddr, claimableAmount, recipient);
@@ -148,39 +145,14 @@ contract PoolFees is IPoolFees {
         return assets;
     }
 
-    function _updateSupplyIndex(
-        address _recipient,
-        bytes32 _poolId,
-        address _token
-    ) internal {
-        address _poolAddr;
-        (_poolAddr, ) = IVault(vault).getPool(_poolId);
-
-        IERC20 lpToken = IERC20(_poolAddr);
-        uint256 _supplied = lpToken.balanceOf(_recipient); // get LP balance of `recipient`
-        uint256 _indexRatio = indexRatio[_poolId][_token]; // get global index for accumulated fees
-
-        if (_supplied > 0) {
-            uint256 _supplyIndex = supplyIndex[_recipient][_poolId][_token]; // get last adjusted index for _recipient
-            uint256 _index0 = _indexRatio; // get global index for accumulated fees
-            supplyIndex[_recipient][_poolId][_token] = _index0; // update user current position to global position
-            uint256 _delta0 = _index0 - _supplyIndex; // see if there is any difference that need to be accrued
-            if (_delta0 > 0) {
-                uint256 _share = (_supplied * _delta0) / 1e18; // add accrued difference for each supplied token
-                claimable[_recipient][_poolId][_token] += _share;
-            }
-        } else {
-            supplyIndex[_recipient][_poolId][_token] = _indexRatio;
-        }
-    }
 
     /**
-     * @dev update index ratio after each swap
+     * @dev update fee amount for a token in a pool, only allowed for pool or vault
      * @param _poolId pool id
      * @param _token tokenIn address
      * @param _feeAmount swapping fee
      */
-    function updateRatio(
+    function updateFeeAmount(
         bytes32 _poolId,
         address _token,
         uint256 _feeAmount
@@ -190,15 +162,14 @@ contract PoolFees is IPoolFees {
         address poolAddr;
         (poolAddr, ) = IVault(vault).getPool(_poolId);
         require(msg.sender == poolAddr || msg.sender == vault, "only allowed for pool or vault");
-        uint256 _ratio = (_feeAmount * 1e18) / IERC20(poolAddr).totalSupply(); // 1e18 adjustment is removed during claim
-        if (_ratio > 0) {
-            indexRatio[_poolId][_token] += _ratio;
-        }
-        emit UpdateRatio(_poolId, _token, _feeAmount);
+        require(feesAmounts[_poolId][_token] + _feeAmount >= feesAmounts[_poolId][_token], "Addition overflow");
+        feesAmounts[_poolId][_token] += _feeAmount;
+
+        emit UpdateFeesAmount(_poolId, _token, _feeAmount);
     }
 
-    function getIndexRatio(bytes32 _poolId, address _token) external view returns (uint256) {
-        return indexRatio[_poolId][_token];
+    function getFeesAmounts(bytes32 _poolId, address _token) external view returns (uint256) {
+        return feesAmounts[_poolId][_token];
     }
 
     function setVoter(address _voter) external

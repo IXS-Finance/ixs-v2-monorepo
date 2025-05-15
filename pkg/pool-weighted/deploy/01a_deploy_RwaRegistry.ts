@@ -17,6 +17,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
 
   console.log('RwaRegistry deployed to:', rwaRegistry.address);
+  try {
+    console.log('Verifying RwaRegistry...');
+    await hre.run('verify:verify', {
+      address: rwaRegistry.address,
+      constructorArguments: [authorizer.address],
+    });
+    console.log('Verified RwaRegistry');
+  } catch (error) {
+    console.error('Verification failed:', error);
+  }
 };
 
 export default func;
